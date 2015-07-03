@@ -693,6 +693,7 @@ $(PRJ_FULL_OTA_ZIP): $(OUT_TARGET_ZIP) $(OUT_LOGO_BIN)
 	$(hide) $(OTA_FROM_TARGET_FILES) \
 			$(if $(filter true,$(PRODUCE_BLOCK_BASED_OTA)),--block,) \
 			--no_prereq \
+			-e $(PRJ_UPDATER_SCRIPT_PART) \
 			-k $(OTA_CERT) \
 			$(OUT_TARGET_ZIP) $(PRJ_FULL_OTA_ZIP) \
 			|| exit 51

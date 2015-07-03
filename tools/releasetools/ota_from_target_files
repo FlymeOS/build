@@ -1472,7 +1472,10 @@ def main(argv):
     sys.exit(1)
 
   if OPTIONS.extra_script is not None:
-    OPTIONS.extra_script = open(OPTIONS.extra_script).read()
+    if os.path.exists(OPTIONS.extra_script):
+      OPTIONS.extra_script = open(OPTIONS.extra_script).read()
+    else:
+      OPTIONS.extra_script = None
 
   print "unzipping target target-files..."
   OPTIONS.input_tmp, input_zip = common.UnzipTemp(args[0])
