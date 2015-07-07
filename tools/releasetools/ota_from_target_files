@@ -510,10 +510,6 @@ def WriteFullOTAPackage(input_zip, output_zip):
   has_recovery_patch = HasRecoveryPatch(input_zip)
   block_based = OPTIONS.block_based and has_recovery_patch
 
-  # [Coron] Start. No recovery patch presented.
-  block_based = OPTIONS.block_based
-  # [Coron] End
-
   if not OPTIONS.omit_prereq:
     ts = GetBuildProp("ro.build.date.utc", OPTIONS.info_dict)
     ts_text = GetBuildProp("ro.build.date", OPTIONS.info_dict)

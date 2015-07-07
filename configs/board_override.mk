@@ -62,6 +62,7 @@ BOARD_PREBUILT += $(BOARD_PREBUILT_DEFAULT)
 BOARD_MODIFY_RESID_FILES := \
         priv-app/Telecom/Telecom.apk \
         priv-app/TeleService/TeleService.apk \
+        priv-app/Dialer/Dialer.apk \
         priv-app/ContactsProvider/ContactsProvider.apk \
         priv-app/DownloadProvider/DownloadProvider.apk \
         priv-app/Settings/Settings.apk \

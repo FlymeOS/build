@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 1602158(Nexus 5) ==> builder.20150630150012_R(Nexus 5)
-# Date: 2015/06/30 16:18
+# version: from 1602158(Nexus 5) ==> builder.20150716163311_R(Nexus 5)
+# Date: 2015/07/16 17:54
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -11,7 +11,6 @@ BOARD_PREBUILT_DIRS += \
     app/FileManager \
     app/GameCenter \
     app/IflytekSpeechService \
-    app/Life \
     app/LogReport \
     app/MzAccount \
     app/MzBackup \
@@ -48,6 +47,7 @@ BOARD_PREBUILT_DIRS += \
     priv-app/FlymeLauncher \
     priv-app/Gallery \
     priv-app/Keyguard \
+    priv-app/Life \
     priv-app/Mms \
     priv-app/Music \
     priv-app/MzAccountPlugin \
@@ -95,6 +95,7 @@ BOARD_PREBUILT += \
     framework/flyme-telephony-common.jar \
     framework/meizu2_jcifs.jar \
     framework/telephony-meizu.jar \
+    lib/libBMapApiEngine_v1_3_5.so \
     lib/libDClient.so \
     lib/libDominantColors.so \
     lib/libFace.so \
@@ -104,6 +105,8 @@ BOARD_PREBUILT += \
     lib/libRSSupport.so \
     lib/libRefocusModule.so \
     lib/libTmsdk-2.0.7-mfr.so \
+    lib/libWnnEngDic.so \
+    lib/libWnnJpnDic.so \
     lib/libams-1.1.4-64b-mfr.so \
     lib/libaudioinfo_jni.so \
     lib/libavcodec.so \
@@ -118,17 +121,20 @@ BOARD_PREBUILT += \
     lib/libeffects_mosaic.so \
     lib/libem_aitalk5.so \
     lib/libentryexpro.so \
+    lib/libexif_gallery.so \
     lib/libffmpeg_utils.so \
     lib/libfile_jni.so \
     lib/libimage_codec.so \
     lib/libimage_dehazing.so \
     lib/libimageproc.so \
+    lib/libipc_pref.527.1.so \
     lib/libjni_customizecenter_gauss_blur.so \
     lib/libjni_gallery_utils.so \
     lib/libjni_gauss_blur.so \
     lib/libkanbox_meizu_gallery_sdk.so \
     lib/liblocSDK4d.so \
     lib/liblocSDK_2_5OEM.so \
+    lib/libmcode_image.so \
     lib/libmeizucamera.so \
     lib/libmobilesafe360-sdk-jni-524.2.so \
     lib/libnative_blur.so \
@@ -151,6 +157,7 @@ BOARD_PREBUILT += \
     lib/libttspico.so \
     lib/libttsplusmsc.so \
     lib/libupdate-jni-1.0.1.2002.so \
+    lib/libwnndict.so \
     media/audio/alarms/After_school.ogg \
     media/audio/alarms/Beep.ogg \
     media/audio/alarms/Blues.ogg \
@@ -293,6 +300,7 @@ BOARD_PRESIGNED_APPS += \
     GoogleLoginService.apk \
     GoogleServicesFramework.apk \
     IflytekSpeechService.apk \
+    Life.apk \
     Maps.apk \
     MzAccountPlugin.apk \
     NetworkLocation_baidu.apk \
