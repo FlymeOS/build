@@ -89,7 +89,7 @@ endef
 
 # get all files in the directory, only for makefile
 define get_all_files_in_dir
-$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f; fi)))
+$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f -o -type l; fi)))
 endef
 
 # get all smali files in the directory, only for find xx.jar.out, process "$" symbol
@@ -500,9 +500,9 @@ endef
 # copy vendor or source directory
 define prebuilt_template
 PREBUILT_TARGET += $(2)
-$(2): $(1)
+$(2):
 	$(hide) if [ ! -d `dirname $(2)` ]; then mkdir -p `dirname $(2)`; fi;
-	$(hide) cp --remove-destination "$(1)" "$(2)";
+	$(hide) cp -P --remove-destination "$(1)" "$(2)";
 endef
 
 

@@ -178,11 +178,11 @@ def main(fileinfo, systeminfo, linkinfo):
             name = pList[-4]          #file name
             selable = pList[-5]       #SE label
             path = os.path.join(dir, name)
-            if cmp(lname[0], "/") == 0:  #file is a absolute path, not need to combine
-                lpath = lname
-            else:
-                lpath = os.path.join(dir, lname)
-            lFile.write("%s|%s\n" %(path, lpath))
+            # if cmp(lname[0], "/") == 0:  #file is a absolute path, not need to combine
+            #     lpath = lname
+            # else:
+            #     lpath = os.path.join(dir, lname)
+            lFile.write("%s|%s\n" % (path, lname))
             sFile.write("%s %s %s %s selabel=%s capabilities=0x0\n" %(path, uid, gid, prop, selable))
 
         else:

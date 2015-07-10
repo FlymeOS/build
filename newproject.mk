@@ -120,7 +120,7 @@ $(VENDOR_TARGET_ZIP): $(VENDOR_RECOVERY_FSTAB)
 	$(hide) rm -rf $(VENDOR_TARGET_DIR)
 	$(hide) cp -r $(VENDOR_DIR) $(VENDOR_TARGET_DIR)
 	$(hide) echo ">>> recover the link files for $(VENDOR_TARGET_DIR) ..."
-	$(hide) $(RECOVER_LINK) $(VENDOR_TARGET_DIR)/META/linkinfo.txt $(VENDOR_TARGET_DIR);
+	$(hide) $(RECOVERY_LINK) $(VENDOR_TARGET_DIR)/META/linkinfo.txt $(VENDOR_TARGET_DIR);
 	$(hide) echo "<<< recover the link files for $(VENDOR_TARGET_DIR) done"
 	$(hide) mv $(VENDOR_TARGET_DIR)/system $(VENDOR_TARGET_DIR)/SYSTEM
 	$(hide) rm -rf $(VENDOR_TARGET_DIR)/BOOTABLE_IMAGES/ $(VENDOR_TARGET_DIR)/BOOT
@@ -146,3 +146,10 @@ $(VENDOR_OTA_ZIP): $(VENDOR_TARGET_ZIP)
 	$(hide) echo "> build vendor ota package ..."
 	$(hide) $(TARGET_FILES_FROM_DEVICE) ota
 	$(hide) echo "< build vendor ota package done"
+
+###################### recovery link ########################
+.PHONY: recovery_link
+recovery_link: $(VENDOR_DIR)
+	$(hide) echo "> recovery vendor linkinfo ..."
+	$(hide) $(RECOVERY_LINK) $(VENDOR_DIR)/META/linkinfo.txt $(VENDOR_DIR);
+	$(hide) echo "< recovery vendor linkinfo done"

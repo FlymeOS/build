@@ -323,7 +323,7 @@ DIFFMAP_TOOL             := $(PORT_BUILD_TOOLS)/diffmap.sh
 MODIFY_ID_TOOL           := $(PORT_BUILD_TOOLS)/modifyID.py
 GENMAP_TOOL              := $(PORT_BUILD_TOOLS)/GenMap.py
 
-RECOVER_LINK             := $(PORT_BUILD_TOOLS)/releasetools/recoverylink.py
+RECOVERY_LINK            := $(PORT_BUILD_TOOLS)/releasetools/recoverylink.py
 OTA_FROM_TARGET_FILES    := $(PORT_BUILD_TOOLS)/releasetools/ota_from_target_files
 IMG_FROM_TARGET_FILES    := $(PORT_BUILD_TOOLS)/releasetools/img_from_target_files
 SIGN_TARGET_FILES_APKS   := $(PORT_BUILD_TOOLS)/releasetools/sign_target_files_apks
@@ -337,7 +337,7 @@ SIGN_APK_WITH_APKCERTS   := $(PORT_BUILD_TOOLS)/sign_apk_with_apkcerts.sh
 PORT_CUSTOM_APP          := $(PORT_BUILD_TOOLS)/custom_app.sh
 PORT_CUSTOM_JAR          := $(PORT_BUILD_TOOLS)/custom_jar.sh
 PORT_CUSTOM_BOARD_ZIP    := $(PORT_BUILD_TOOLS)/custom_board_zip.sh
-PORT_CUSTOM_TARGET_FILES := $(PORT_BUILD_TOOLS)/custom_target_files.sh
+PORT_CUSTOM_TARGET_FILES := $(PORT_BUILD_TOOLS)/custom_targetfiles.sh
 PORT_PREPARE_CUSTOM_JAR  := $(PORT_BUILD_TOOLS)/prepare_custom_jar.sh
 
 FLASH_OTA_TO_DEVICE      := $(PORT_BUILD_TOOLS)/flash_ota_to_device.sh

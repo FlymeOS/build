@@ -544,14 +544,6 @@ OTA $(OUT_OTA): $(strip $(call get_all_files_in_dir,$(VENDOR_OTA))) $(strip $(ca
 	$(hide) if [ -f $(PRJ_UPDATER_SCRIPT_OVERLAY) ]; then cp $(PRJ_UPDATER_SCRIPT_OVERLAY) $(OUT_OTA); fi
 	$(hide) echo "<< generate |target-files|OTA| done";
 
-########### recover the link files in system ###########
-.PHONY: recover_link
-OTA_TARGETS += recover_link
-recover_link: target-files-system $(OUT_SYSTEM)
-	$(hide) echo ">> recover the link files in system |target-files|LINK| ...";
-	$(hide) $(RECOVER_LINK) $(VENDOR_META)/linkinfo.txt $(OUT_TARGET_DIR);
-	$(hide) echo "<< recover the link files in system |target-files|LINK| done"
-
 ################# update the apk certs #################
 .PHONY: updateapkcerts
 updateapkcerts: $(OUT_META)/apkcerts.txt

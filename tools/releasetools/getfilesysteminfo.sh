@@ -16,5 +16,6 @@ function traverse_dir {
 	done
 }
 
-echo "Traversing /system to retrieve filesystem_info"
+echo "Traversing /system to retrieve filesystem_info ..."
 traverse_dir "/system"
+echo "Traversing /system to retrieve filesystem_info done"
