@@ -370,6 +370,10 @@ class EdifyGenerator(object):
 
     self.UnmountAll()
 
+    # [CORON] start
+    self.OverlayUpdaterScript(input_zip)
+    # [CORON] end
+
     common.ZipWriteStr(output_zip, "META-INF/com/google/android/updater-script",
                        "\n".join(self.script) + "\n")
 
@@ -379,3 +383,16 @@ class EdifyGenerator(object):
       data = open(input_path, "rb").read()
     common.ZipWriteStr(output_zip, "META-INF/com/google/android/update-binary",
                        data, perms=0755)
+
+  # [CORON] start
+  # Overlay updater-script
+  def OverlayUpdaterScript(self, input_zip):
+    try:
+      data = input_zip.read("OTA/updater-script")
+      self.script = []
+      self.script.append(data)
+      print "Using OTA/updater-script..."
+    except KeyError:
+      pass
+
+  # [CORON] end
