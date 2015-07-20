@@ -35,7 +35,10 @@ try:
 
             # relink
             if DEBUG: print "link %s -> %s" % (link_src, link_name)
-            os.symlink(link_src, link_name)
+            try:
+                os.symlink(link_src, link_name)
+            except:
+                print "Failed to link %s -> %s" % (link_src, link_name)
 
         file_handle.close()
 except IOError:
