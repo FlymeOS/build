@@ -33,6 +33,9 @@ try:
             if os.path.dirname(link_item[0]) == os.path.dirname(link_src):
                 link_src = os.path.basename(link_src)
 
+            if not os.path.exists(os.path.dirname(link_name)):
+                os.makedirs(os.path.dirname(link_name))
+
             # relink
             if DEBUG: print "link %s -> %s" % (link_src, link_name)
             try:
