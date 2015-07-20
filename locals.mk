@@ -54,7 +54,8 @@ ALL_DENSITY := \
      mdpi \
      hdpi \
      xhdpi \
-     xxhdpi
+     xxhdpi \
+     xxxhdpi
 
 ifeq ($(strip $(DENSITY)),)
     DENSITY := hdpi
