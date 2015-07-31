@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 1602158(Nexus 5) ==> builder.20150716163311_R(Nexus 5)
-# Date: 2015/07/16 17:54
+# version: from 1602158(Nexus 5) ==> builder.20150731195043_R(Nexus 5)
+# Date: 2015/07/31 21:07
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -109,9 +109,6 @@ BOARD_PREBUILT += \
     lib/libWnnJpnDic.so \
     lib/libams-1.1.4-64b-mfr.so \
     lib/libaudioinfo_jni.so \
-    lib/libavcodec.so \
-    lib/libavformat.so \
-    lib/libavutil.so \
     lib/libbdpush_V1_0.so \
     lib/libblur.so \
     lib/libbspatch.so \
@@ -122,7 +119,6 @@ BOARD_PREBUILT += \
     lib/libem_aitalk5.so \
     lib/libentryexpro.so \
     lib/libexif_gallery.so \
-    lib/libffmpeg_utils.so \
     lib/libfile_jni.so \
     lib/libimage_codec.so \
     lib/libimage_dehazing.so \
@@ -146,11 +142,7 @@ BOARD_PREBUILT += \
     lib/librender_engine.so \
     lib/libskia_hw_interface.so \
     lib/libskia_private.so \
-    lib/libstagefright_soft_ffmpegadec.so \
-    lib/libstagefright_soft_ffmpegvdec.so \
     lib/libstlport_shared.so \
-    lib/libswresample.so \
-    lib/libswscale.so \
     lib/libtaglib.so \
     lib/libttsaisound.so \
     lib/libttscompat.so \

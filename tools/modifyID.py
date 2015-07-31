@@ -9,11 +9,23 @@ import sys
 import re
 import os
 
+class Log:
+    DEBUG = False
+
+    @staticmethod
+    def d(message):
+        if Log.DEBUG: print message
+
+    @staticmethod
+    def i(message):
+        print message
+
 class ModifyId(object):
     '''
     classdocs
     '''
 
+    CONST_LEN = len('const/high16')
 
     def __init__(self, updateFile, inDir):
         '''
@@ -59,22 +71,61 @@ class ModifyId(object):
             arrayStr = '0x%st 0x%st 0x%st 0x%st' % (arrayId[-2:], arrayId[-4:-2], arrayId[-6:-4], arrayId[-8:-6])
         return arrayStr.replace('0x0', '0x')
 
+    def getIdByHigh16(self, high16Str):
+        idx = high16Str.index('0x')
+        rId = '%s%s' % (high16Str[idx:], '0000')
+        return (rId,high16Str[0:idx])
+
+    def getIdByApktool2High16(self, high16Str):
+        idx = high16Str.index('0x')
+        rId = high16Str[idx:]
+        return (rId,high16Str[0:idx])
+
     def modifyId(self):
-        normalIdRule = re.compile(r'0x(?:[1-9]|7f)[0-1][0-9a-f]{5}')
-        arrayIdRule = re.compile(r'(?:0x[0-9a-f]{1,2}t ){3}0x(?:[1-9]|7f)t')
+        normalIdRule = re.compile(r'0x(?:[1-9a-f]|7f)[0-1][0-9a-f]{5}$', re.M)
+        arrayIdRule = re.compile(r'(?:0x[0-9a-f]{1,2}t ){3}0x(?:[1-9a-f]|7f)t')
+
+        high16IdRule = re.compile(r'const/high16[ ]*v[0-9][0-9]*,[ ]*0x(?:[1-9a-f]|7f)[0-1][0-9a-f]$', re.M)
+        apktool2High16IdRule = re.compile(r'const/high16[ ]*v[0-9][0-9]*,[ ]*0x(?:[1-9a-f]|7f)[0-1][0-9a-f]0000$', re.M)
 
         for smaliFile in self.smaliFileList:
-            # print ">>> start modify: %s" % smaliFile
+            #Log.d(">>> start modify: %s" % smaliFile)
             sf = file(smaliFile, 'r+')
             fileStr = sf.read()
             modify = False
+
+            for matchHigh16IdStr in high16IdRule.findall(fileStr):
+                (matchId, preStr) = self.getIdByHigh16(matchHigh16IdStr)
+                newId = self.idMap.get(matchId, None)
+                if newId is not None:
+                    if newId[-4:] != '0000':
+                        newStr = r'const%s0x#%s' % (preStr[ModifyId.CONST_LEN:], newId[2:])
+                    else:
+                        newStr = r'%s0x#%s' % (preStr, newId[2:-4])
+
+                    fileStr = fileStr.replace(matchHigh16IdStr, newStr)
+                    modify = True
+                    Log.d(">>> modify id from %s to %s" % (matchId, newStr))
+
+            for matchApktool2High16IdStr in apktool2High16IdRule.findall(fileStr):
+                (matchId, preStr) = self.getIdByApktool2High16(matchApktool2High16IdStr)
+                newId = self.idMap.get(matchId, None)
+                if newId is not None:
+                    if newId[-4:] != '0000':
+                        newStr = r'const%s0x#%s' % (preStr[ModifyId.CONST_LEN:], newId[2:])
+                    else:
+                        newStr = r'%s0x#%s' % (preStr, newId[2:])
+
+                    fileStr = fileStr.replace(matchApktool2High16IdStr, newStr)
+                    modify = True
+                    Log.d(">>> modify id from %s to %s" % (matchId, newStr))
 
             for matchId in normalIdRule.findall(fileStr):
                 newId = self.idMap.get(matchId, None)
                 if newId is not None:
                     fileStr = fileStr.replace(matchId, r'0x#%s' % newId[2:])
                     modify = True
-                    # print ">>> modify id from %s to %s" % (matchId, newId)
+                    Log.d(">>> modify id from %s to %s" % (matchId, newId))
 
             for matchArrIdStr in  arrayIdRule.findall(fileStr):
                 matchArrId = self.getArrayId(matchArrIdStr)
@@ -83,7 +134,7 @@ class ModifyId(object):
                     newArrIdStr = self.getArrayStr(newArrId)
                     fileStr = fileStr.replace(matchArrIdStr, r'0x#%s' % newArrIdStr[2:])
                     modify = True
-                    # print ">>> modify array id from %s to %s" % (matchArrIdStr, newArrIdStr)
+                    Log.d(">>> modify array id from %s to %s" % (matchArrIdStr, newArrIdStr))
 
             if modify is True:
                 sf.seek(0, 0)

@@ -10,7 +10,7 @@ TARGET_FILES_FROM_DEVICE:= $(PORT_BUILD_TOOLS)/target_files_from_device.sh
 ##################### newproject ########################
 ./PHONY: newproject
 
-newproject: prepare-vendor prepare-vendor-boot prepare-vendor-recovery decodefile
+newproject: prepare-vendor prepare-vendor-boot prepare-vendor-recovery decodefile recovery_link
 	$(hide) if [ -f $(OUT_DIR)/build-info-to-user.txt ];then \
 			cat $(OUT_DIR)/build-info-to-user.txt; \
 		fi
