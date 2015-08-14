@@ -197,6 +197,9 @@ OUT_SYSTEM_LIB       := $(OUT_SYSTEM)/lib
 OUT_SYSTEM_BIN       := $(OUT_SYSTEM)/bin
 OUT_BUILD_PROP       := $(OUT_SYSTEM)/build.prop
 
+# convert filesystem_config to data
+CONVERT_FILESYSTEM   := $(PORT_ROOT)/build/tools/convert_filesystem.py
+
 OUT_MAC_PERMISSIONS_XML := $(OUT_SYSTEM)/etc/security/mac_permissions.xml
 
 ####################### board's release ###################

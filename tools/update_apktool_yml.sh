@@ -44,13 +44,6 @@ function updateApktoolYml()
                    sed -i "s/$resIdMatch/$resIdMatch2/g" $apktoolYml
                fi      
             done
-
-	    # TODO
-            # If share library resources is detected in apk, this apk will be mark as "sharedLibrary: true",
-            # and then, this apk is build back as share library which is wrong.
-            # This is a bug of apktool 2.0, as a workaround, just mark sharedLibrary as false.
-	    echo 'I/update_apktool_yml: Change "sharedLibrary: true" to "sharedLibrary: false" for non framework apk'
-            sed -i "s/sharedLibrary: true/sharedLibrary: false/g" $apktoolYml
 	fi
         if [ x"$tags" != x ];then
             sed -i '/tag\:/d' $apktoolYml

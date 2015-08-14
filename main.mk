@@ -77,7 +77,7 @@ CLEAN_TARGETS += clean-out
 .PHONY: clean-out
 clean-out:
 	$(hide) if [ -d $(OUT_DIR) ];then \
-			filelist=$$(ls $(OUT_DIR)/*.zip 2> /dev/null | egrep "$(OUT_DIR)/ota.*\.zip|$(OUT_DIR)/target.*\.zip" | tr "\n" " "); \
+			filelist=$$(ls $(OUT_DIR)/*.zip 2> /dev/null | egrep "$(OUT_DIR)/flyme.*\.zip|$(OUT_DIR)/target.*\.zip" | tr "\n" " "); \
 			if [ x"$$filelist" != x"" ];then \
 				filename=`echo $$filelist | sed 's#$(OUT_DIR)/##g'`; \
 				echo "> Backup files to $(HISTORY_DIR) ..."; \
@@ -529,6 +529,10 @@ META: $(eval meta_sources := $(filter-out %/filesystem_config.txt %/apkcerts.txt
 META: $(OUT_META)/filesystem_config.txt $(OUT_META)/apkcerts.txt $(OUT_META)/misc_info.txt
 	$(hide) cp $(meta_sources) $(OUT_META);
 	$(hide) echo "<< generate |target-files|META| done"
+        # convert filesystem_config to data
+	$(hide) echo ">> convert filesystem_config to data"
+	$(hide) $(CONVERT_FILESYSTEM) $(OUT_META) $(OUT_DATA)
+	$(hide) echo "<< convert done"
 
 ####################### OTA ############################
 .PHONY: OTA
@@ -540,7 +544,6 @@ OTA $(OUT_OTA): $(strip $(call get_all_files_in_dir,$(VENDOR_OTA))) $(strip $(ca
 	$(hide) cp -rf $(VENDOR_OTA)/* $(OUT_OTA);
 	$(hide) if [ -d $(BOARD_OTA) ]; then cp -rf $(BOARD_OTA)/* $(OUT_OTA); fi
 	$(hide) if [ -d $(PRJ_OTA_OVERLAY) ]; then cp -rf $(PRJ_OTA_OVERLAY)/* $(OUT_OTA); fi
-	$(hide) if [ -f $(PRJ_UPDATE_BINARY_OVERLAY) ]; then cp $(PRJ_UPDATE_BINARY_OVERLAY) $(OUT_OTA)/bin/updater; fi
 	$(hide) if [ -f $(PRJ_UPDATER_SCRIPT_OVERLAY) ]; then cp $(PRJ_UPDATER_SCRIPT_OVERLAY) $(OUT_OTA); fi
 	$(hide) echo "<< generate |target-files|OTA| done";
 
@@ -675,7 +678,7 @@ SIGN_OTA_PARAM := --no_sign
 endif
 
 ifeq ($(PRJ_FULL_OTA_ZIP),)
-PRJ_FULL_OTA_ZIP := $(OUT_DIR)/ota-$(PRJ_NAME).zip
+PRJ_FULL_OTA_ZIP := $(OUT_DIR)/flyme_$(PRJ_NAME).zip
 endif
 
 $(PRJ_FULL_OTA_ZIP): $(OUT_TARGET_ZIP) $(OUT_LOGO_BIN)
@@ -683,7 +686,8 @@ $(PRJ_FULL_OTA_ZIP): $(OUT_TARGET_ZIP) $(OUT_LOGO_BIN)
 	$(hide) echo $(PRJ_FULL_OTA_ZIP) > $(PRJ_SAVED_OTA_NAME)
 	$(hide) echo $(OUT_TARGET_ZIP) > $(PRJ_SAVED_TARGET_NAME)
 	$(hide) $(OTA_FROM_TARGET_FILES) \
-			$(if $(filter true,$(PRODUCE_BLOCK_BASED_OTA)),--block,) \
+			$(if $(filter true,$(PRODUCE_BLOCK_BASED_OTA)),--block) \
+			--binary $(PRJ_UPDATE_BINARY_OVERLAY) \
 			--no_prereq \
 			-e $(PRJ_UPDATER_SCRIPT_PART) \
 			-k $(OTA_CERT) \

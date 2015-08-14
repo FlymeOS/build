@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 1602158(Nexus 5) ==> builder.20150731195043_R(Nexus 5)
-# Date: 2015/07/31 21:07
+# version: from 1602158(Nexus 5) ==> builder.20150814145600_R(Nexus 5)
+# Date: 2015/08/14 16:10
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -44,6 +44,7 @@ BOARD_PREBUILT_DIRS += \
     priv-app/CustomizeCenter \
     priv-app/Dialer \
     priv-app/Email \
+    priv-app/Feedback \
     priv-app/FlymeLauncher \
     priv-app/Gallery \
     priv-app/Keyguard \

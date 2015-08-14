@@ -107,6 +107,12 @@ if [ -f $(2) ]; then \
 fi
 endef
 
+define getprop_filter_version
+if [ -f $(2) ]; then \
+    grep -v "^[ \t]*#" $(2) | awk -F= '/$(1)/{print $$2}' | tail -1 | grep -o "[0-9\.]*[R]"; \
+fi
+endef
+
 define getMinSdkVersionFromApktoolYml
 if [ -f $(1) ]; then awk '/minSdkVersion:/{print $$NF}' $(1) | grep '[0-9]*' -o; fi
 endef

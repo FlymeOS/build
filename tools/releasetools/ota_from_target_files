@@ -313,7 +313,10 @@ class Item:
       # need to issue set_perm/set_perm_recursive commands if we're
       # supposed to be something different.
       if item.dir:
-        if current != item.best_subtree:
+        # [Coron] Start
+        # Skipped data and data/media dirs when set the folder's perms
+        if current != item.best_subtree and item.name != "data" and item.name != "data/media":
+        # [Coron] End
           script.SetPermissionsRecursive("/"+item.name, *item.best_subtree)
           current = item.best_subtree
         if item.uid != current[0] or item.gid != current[1] or \
@@ -349,7 +352,11 @@ def CopyPartitionFiles(itemset, input_zip, output_zip=None, substitute=None):
 
   for info in input_zip.infolist():
     if info.filename.startswith(partition.upper() + "/"):
-      basefilename = info.filename[7:]
+      # [Coron] Start
+      # Add data partition surpport
+      basefilename = info.filename[(len(partition) + 1):]
+      # [Coron] End
+
       if IsSymlink(info):
         symlinks.append((input_zip.read(info.filename),
                          "/" + partition + "/" + basefilename))
@@ -639,6 +646,19 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
 
   script.ShowProgress(0.2, 10)
   device_specific.FullOTA_InstallEnd()
+
+  # [Coron] Start
+  # Add data partition surpport
+  if os.path.isdir("out/merged_target_files/DATA"):
+    script.UnpackPackageDir("data", "/data")
+
+    data_items = ItemSet("data", "META/data_filesystem_config.txt")
+    data_symlinks = CopyPartitionFiles(data_items, input_zip, output_zip)
+    script.MakeSymlinks(data_symlinks)
+
+    data_items.GetMetadata(input_zip)
+    data_items.Get("data").SetPermissions(script)
+  # [Coron] End
 
   if OPTIONS.extra_script is not None:
     script.AppendExtra(OPTIONS.extra_script)
@@ -1436,7 +1456,8 @@ def main(argv):
     elif o == "--block":
       OPTIONS.block_based = True
     elif o in ("-b", "--binary"):
-      OPTIONS.updater_binary = a
+      if os.path.exists(a):
+        OPTIONS.updater_binary = a
     elif o in ("--no_fallback_to_full",):
       OPTIONS.fallback_to_full = False
     else:
