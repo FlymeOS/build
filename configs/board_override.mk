@@ -95,6 +95,7 @@ endif #ifeq ($(strip $(VERSION_NUMBER)),)
 PRODUCT_BRAND := $(shell $(call getprop,ro.product.brand,$(VENDOR_SYSTEM)/build.prop))
 TARGET_PRODUCT := $(shell $(call getprop,ro.product.name,$(VENDOR_SYSTEM)/build.prop))
 TARGET_DEVICE := $(shell $(call getprop,ro.product.device,$(VENDOR_SYSTEM)/build.prop))
+TARGET_MODEL := $(shell $(call getprop,ro.product.model,$(VENDOR_SYSTEM)/build.prop))
 DISPLAY_VERSION := $(shell $(call getprop_filter_version,ro.build.display.id,$(BOARD_SYSTEM)/build.prop))
 
 PLATFORM_VERSION := $(shell $(call getprop,ro.build.version.release,$(VENDOR_SYSTEM)/build.prop))
@@ -187,16 +188,16 @@ $(call resetPosition,BOARD_PRESIGNED_APPS_DEFAULT,$(BOARD_SYSTEM_FOR_POS))
 
 ifeq ($(OTA_ZIP),)
 ifeq ($(ROMER),)
-PRJ_FULL_OTA_ZIP := $(OUT_DIR)/flyme_$(TARGET_DEVICE)_$(DISPLAY_VERSION).zip
+PRJ_FULL_OTA_ZIP := $(OUT_DIR)/flyme_$(TARGET_MODEL)_$(DISPLAY_VERSION).zip
 else
-PRJ_FULL_OTA_ZIP := $(OUT_DIR)/flyme_$(TARGET_DEVICE)_$(ROMER)_$(DISPLAY_VERSION).zip
+PRJ_FULL_OTA_ZIP := $(OUT_DIR)/flyme_$(TARGET_MODEL)_$(ROMER)_$(DISPLAY_VERSION).zip
 endif
 else
 PRJ_FULL_OTA_ZIP := $(OTA_ZIP)
 endif
 
 ifeq ($(TARGET_ZIP),)
-PRJ_TARGET_ZIP := $(OUT_DIR)/target_files_$(TARGET_DEVICE)_$(BUILD_DATE).zip
+PRJ_TARGET_ZIP := $(OUT_DIR)/target_files_$(TARGET_MODEL)_$(BUILD_DATE).zip
 else
 PRJ_TARGET_ZIP := $(TARGET_ZIP)
 endif
