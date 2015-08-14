@@ -113,6 +113,13 @@ if [ -f $(2) ]; then \
 fi
 endef
 
+define getprop_escape_space
+if [ -f $(2) ]; then \
+    grep -v "^[ \t]*#" $(2) | awk -F= '/$(1)/{print $$2}' | tail -1 | sed -e 's/[  _]/-/g'; \
+fi
+endef
+
+
 define getMinSdkVersionFromApktoolYml
 if [ -f $(1) ]; then awk '/minSdkVersion:/{print $$NF}' $(1) | grep '[0-9]*' -o; fi
 endef

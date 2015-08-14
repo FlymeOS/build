@@ -95,7 +95,7 @@ endif #ifeq ($(strip $(VERSION_NUMBER)),)
 PRODUCT_BRAND := $(shell $(call getprop,ro.product.brand,$(VENDOR_SYSTEM)/build.prop))
 TARGET_PRODUCT := $(shell $(call getprop,ro.product.name,$(VENDOR_SYSTEM)/build.prop))
 TARGET_DEVICE := $(shell $(call getprop,ro.product.device,$(VENDOR_SYSTEM)/build.prop))
-TARGET_MODEL := $(shell $(call getprop,ro.product.model,$(VENDOR_SYSTEM)/build.prop))
+TARGET_MODEL := $(shell $(call getprop_escape_space,ro.product.model,$(VENDOR_SYSTEM)/build.prop))
 DISPLAY_VERSION := $(shell $(call getprop_filter_version,ro.build.display.id,$(BOARD_SYSTEM)/build.prop))
 
 PLATFORM_VERSION := $(shell $(call getprop,ro.build.version.release,$(VENDOR_SYSTEM)/build.prop))
