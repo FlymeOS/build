@@ -126,6 +126,11 @@ OPTIONS.updater_binary = None
 OPTIONS.oem_source = None
 OPTIONS.fallback_to_full = True
 
+# [Coron] Start
+# Don't verify fingerprint
+OPTIONS.verify_fingerprint = False
+# [Coron] End
+
 def MostPopularKey(d, default):
   """Given a dict, return the key corresponding to the largest
   value.  Returns 'default' if the dict is empty."""
@@ -775,7 +780,12 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
       OPTIONS.source_info_dict)
   target_recovery = common.GetBootableImage(
       "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
-  updating_recovery = (source_recovery.data != target_recovery.data)
+  # [Coron] Start
+  # May not have recovery
+  updating_recovery = False
+  if source_recovery is not None and target_recovery is not None:
+    updating_recovery = (source_recovery.data != target_recovery.data)
+  # [Coron] End
 
   system_src = GetImage("system", OPTIONS.source_tmp, OPTIONS.source_info_dict)
   system_tgt = GetImage("system", OPTIONS.target_tmp, OPTIONS.target_info_dict)
@@ -849,7 +859,11 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
   device_specific.IncrementalOTA_VerifyBegin()
 
   if oem_props is None:
-    script.AssertSomeFingerprint(source_fp, target_fp)
+    # [Coron] Start
+    # Don't verify fingerprint
+    if OPTIONS.verify_fingerprint:
+      script.AssertSomeFingerprint(source_fp, target_fp)
+    # [Coron] End
   else:
     script.AssertSomeThumbprint(
         GetBuildProp("ro.build.thumbprint", OPTIONS.target_info_dict),
@@ -1127,7 +1141,11 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
   source_fp = CalculateFingerprint(oem_props, oem_dict, OPTIONS.source_info_dict)
 
   if oem_props is None:
-    script.AssertSomeFingerprint(source_fp, target_fp)
+    # [Coron] Start
+    # Don't verify fingerprint
+    if OPTIONS.verify_fingerprint:
+      script.AssertSomeFingerprint(source_fp, target_fp)
+    # [Coron] End
   else:
     script.AssertSomeThumbprint(
         GetBuildProp("ro.build.thumbprint", OPTIONS.target_info_dict),
@@ -1149,7 +1167,12 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
       OPTIONS.source_info_dict)
   target_recovery = common.GetBootableImage(
       "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
-  updating_recovery = (source_recovery.data != target_recovery.data)
+  # [Coron] Start
+  # May not have recovery
+  updating_recovery = False
+  if source_recovery is not None and target_recovery is not None:
+    updating_recovery = (source_recovery.data != target_recovery.data)
+  # [Coron] End
 
   # Here's how we divide up the progress bar:
   #  0.1 for verifying the start state (PatchCheck calls)

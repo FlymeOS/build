@@ -149,7 +149,8 @@ BOARD_PROPERTY_FOLLOW_BASE := \
     ro.meizu.sip.support \
     ro.flyme.hideinfo \
     persist.sys.use.flyme.icon \
-    ro.build.display.id
+    ro.build.display.id \
+    persist.sys.disable_glass_blur
 
 BOARD_SERVICES += \
 

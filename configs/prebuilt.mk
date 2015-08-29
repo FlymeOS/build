@@ -44,7 +44,6 @@ BOARD_PREBUILT_DIRS += \
     priv-app/CustomizeCenter \
     priv-app/Dialer \
     priv-app/Email \
-    priv-app/Feedback \
     priv-app/FlymeLauncher \
     priv-app/Gallery \
     priv-app/Keyguard \
