@@ -21,11 +21,6 @@ rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_BOARD_TAG).apk;\
 $(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_BOARD_TAG)
 endef
 
-define apktool_if_board_modify
-rm -rf $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/[0-9]*-$(APKTOOL_BOARD_TAG).apk;\
-$(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_BOARD_TAG) $(APKTOOL_FRAME_PATH_BOARD_MODIFY)
-endef
-
 # apktool install framework resouce apks in vendor/system/framework
 # which are vendor's framework resource apk
 define apktool_if_vendor
@@ -37,8 +32,7 @@ endef
 # thoese framework resouce apks which were merged from board to vendor
 define apktool_if_merged
 rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_MERGED_TAG).apk;\
-$(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_MERGED_TAG); \
-cp ~/apktool/framework/1-$(APKTOOL_MERGED_TAG).apk $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/1-$(APKTOOL_BOARD_TAG).apk
+$(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_MERGED_TAG);
 endef
 
 
@@ -84,7 +78,7 @@ endef
 
 # used for aapt to get resource
 define get_aapt_framework_params
-`ls $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/[0-9]*-$(APKTOOL_BOARD_TAG).apk | sed 's/^/-I /g'`
+`ls ~/apktool/framework/[0-9]*-$(APKTOOL_BOARD_TAG).apk | sed 's/^/-I /g'`
 endef
 
 # get all files in the directory, only for makefile
@@ -145,7 +139,7 @@ $(AAPT) package -u -z $(call get_aapt_framework_params) \
 	$$$$app_res \
 	-F $(1).tmp.apk \
 	1>/dev/null || exit $$?; \
-$(APKTOOL) d -t $(APKTOOL_BOARD_TAG) -f $(1).tmp.apk -o $(1).tmp -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY); \
+$(APKTOOL) d -t $(APKTOOL_BOARD_TAG) -f $(1).tmp.apk -o $(1).tmp; \
 rm -r $(1)/res && cp -r $(1).tmp/res $(1); \
 rm $(1)/AndroidManifest.xml && cp $(1).tmp/AndroidManifest.xml $(1); \
 rm -rf $(1).tmp.apk $(1).tmp
@@ -162,11 +156,11 @@ $(2): $(1)
 	$(hide) mkdir -p `dirname $(2)`
 	$(hide) if [ "x`grep "\\"$$(apkName)\\"" $(OUT_OBJ_META)/apkcerts.txt | grep "\\"PRESIGNED\\""`" = "x" ]; then \
 		    rm -rf $$(tempSmaliDir); \
-		    $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) $(1) -o $$(tempSmaliDir); \
+		    $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) $(1) -o $$(tempSmaliDir); \
 		    $(call port_custom_app,$$(apkBaseName),$$(tempSmaliDir)); \
 		    $(call aapt_overlay_apk, $$(tempSmaliDir)); \
                     $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG)); \
-		    $(APKTOOL) b $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) -o $$@; \
+		    $(APKTOOL) b $$(tempSmaliDir) -o $$@; \
 		    rm -rf $$(tempSmaliDir); \
 		else \
 		    cp $(1) $(2); \
@@ -341,7 +335,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) echo ">>> build |target-files|SYSTEM|board_modify_apk| to $(OUT_OBJ_SYSTEM)/$(2), tempSmaliDir:$$(tempSmaliDir) ..."
 	$(hide) rm -rf "$$(tempSmaliDir)"
 	$(hide) mkdir -p $(OUT_OBJ_APP)
-	$(hide) $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) $(BOARD_SYSTEM)/$(2) -o $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY);
+	$(hide) $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) $(BOARD_SYSTEM)/$(2) -o $$(tempSmaliDir)
 	$(hide) if [ x"$$(needUpdateRes)" != x"" ];then \
 			$(call modify_res_id,$$(tempSmaliDir)); \
 		else \
@@ -349,7 +343,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 		fi;
 	$(hide) $(call port_custom_app,$$(apkBaseName),$$(tempSmaliDir));
 	$(hide) $(call part_smali_append,$(1)/smali,$$(tempSmaliDir)/smali);
-	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG));
+	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_MERGED_TAG));
 	$(hide) if [ ! -d `dirname $(OUT_OBJ_SYSTEM)/$(2)` ]; then \
 			mkdir -p `dirname $(OUT_OBJ_SYSTEM)/$(2)`; \
 		fi;
@@ -358,7 +352,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 		fi;
 	$(hide) $(call custom_app,$$(apkBaseName),$$(tempSmaliDir));
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
-	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $(OUT_OBJ_SYSTEM)/$(2) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY);
+	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $(OUT_OBJ_SYSTEM)/$(2)
 	$(hide) rm -rf "$$(tempSmaliDir)";
 	$(hide) echo "<<< build |target-files|SYSTEM|board_modify_apk| to $(OUT_OBJ_SYSTEM)/$(2) done"
 endef

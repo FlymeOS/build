@@ -180,7 +180,6 @@ $(BOARD_FRAMEWORK_APKS): $(PREPARE_SOURCE)
 $(IF_BOARD_RES): $(BOARD_FRAMEWORK_APKS) $(PREPARE_SOURCE)
 	$(hide) echo ">>> apktool if(install framework): board ..."
 	$(hide) $(call apktool_if_board,$(BOARD_FRAMEWORK))
-	$(hide) $(call apktool_if_board_modify,$(BOARD_FRAMEWORK))
 	$(hide) mkdir -p `dirname $@`
 	$(hide) touch $@
 	$(hide) echo "<<< apktool if(install framework): board done"
