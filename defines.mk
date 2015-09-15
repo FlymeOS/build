@@ -21,6 +21,11 @@ rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_BOARD_TAG).apk;\
 $(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_BOARD_TAG)
 endef
 
+define apktool_if_board_modify
+rm -rf $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/[0-9]*-$(APKTOOL_BOARD_TAG).apk;\
+$(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_BOARD_TAG) $(APKTOOL_FRAME_PATH_BOARD_MODIFY)
+endef
+
 # apktool install framework resouce apks in vendor/system/framework
 # which are vendor's framework resource apk
 define apktool_if_vendor
@@ -32,7 +37,8 @@ endef
 # thoese framework resouce apks which were merged from board to vendor
 define apktool_if_merged
 rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_MERGED_TAG).apk;\
-$(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_MERGED_TAG);
+$(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_MERGED_TAG); \
+cp ~/apktool/framework/1-$(APKTOOL_MERGED_TAG).apk $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/1-$(APKTOOL_BOARD_TAG).apk
 endef
 
 
@@ -76,11 +82,6 @@ define get_merged_installed_framework_params
 `ls ~/apktool/framework/[0-9]*-$(APKTOOL_MERGED_TAG).apk | sed 's/^/-I /g'`
 endef
 
-# used for aapt to get resource
-define get_aapt_framework_params
-`ls ~/apktool/framework/[0-9]*-$(APKTOOL_BOARD_TAG).apk | sed 's/^/-I /g'`
-endef
-
 # get all files in the directory, only for makefile
 define get_all_files_in_dir
 $(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f -o -type l; fi)))
@@ -121,6 +122,7 @@ endef
 # used to merged resource for apk
 # only used for board_modify_apps
 define aapt_overlay_apk
+echo "\n>>>> overlay apk resources ..."; \
 if [ "x$(3)" != "x" ] && [ -d $(3)/res ]; then app_res="$$$$app_res -S $(3)/res"; fi; \
 if [ "x$(2)" != "x" ] && [ -d $(2)/res ]; then app_res="$$$$app_res -S $(2)/res"; fi; \
 if [ "x$(1)" != "x" ] && [ -d $(1)/res ]; then app_res="$$$$app_res -S $(1)/res"; fi; \
@@ -128,7 +130,7 @@ if [ -d $(1)/assets ]; then app_assests="$$$$app_assests -A $(1)/assets"; fi; \
 minSdkVersion=`$(call getMinSdkVersionFromApktoolYmlFD,$(1)/apktool.yml)`; \
 targetSdkVersion=`$(call getTargetSdkVersionFromApktoolYmlFD,$(1)/apktool.yml)`;\
 sed -i 's/android:versionName[ ]*=[ ]*"[^\"]*"//g' $(1)/AndroidManifest.xml; \
-$(AAPT) package -u -z $(call get_aapt_framework_params) \
+$(AAPT) package -u -z $(call get_board_installed_framework_params) \
 	$(if $(filter false,$(REDUCE_RESOURCES)),,$(addprefix -c , $(PRIVATE_PRODUCT_AAPT_CONFIG)) \
 	                                          $(addprefix --preferred-density , $(PRIVATE_PRODUCT_AAPT_PREF_CONFIG))) \
 	$(if $$$$minSdkVersion,$(addprefix --min-sdk-version , $$$$minSdkVersion),) \
@@ -142,7 +144,8 @@ $(AAPT) package -u -z $(call get_aapt_framework_params) \
 $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) -f $(1).tmp.apk -o $(1).tmp; \
 rm -r $(1)/res && cp -r $(1).tmp/res $(1); \
 rm $(1)/AndroidManifest.xml && cp $(1).tmp/AndroidManifest.xml $(1); \
-rm -rf $(1).tmp.apk $(1).tmp
+rm -rf $(1).tmp.apk $(1).tmp; \
+echo "<<<< overlay apk resources done\n"
 endef
 
 define aapt_build_board_apk
@@ -160,7 +163,7 @@ $(2): $(1)
 		    $(call port_custom_app,$$(apkBaseName),$$(tempSmaliDir)); \
 		    $(call aapt_overlay_apk, $$(tempSmaliDir)); \
                     $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG)); \
-		    $(APKTOOL) b $$(tempSmaliDir) -o $$@; \
+		    $(APKTOOL) b $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) -o $$@; \
 		    rm -rf $$(tempSmaliDir); \
 		else \
 		    cp $(1) $(2); \
@@ -335,15 +338,15 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) echo ">>> build |target-files|SYSTEM|board_modify_apk| to $(OUT_OBJ_SYSTEM)/$(2), tempSmaliDir:$$(tempSmaliDir) ..."
 	$(hide) rm -rf "$$(tempSmaliDir)"
 	$(hide) mkdir -p $(OUT_OBJ_APP)
+	$(hide) echo ">>>> apktool decode $(2) ..."
 	$(hide) $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) $(BOARD_SYSTEM)/$(2) -o $$(tempSmaliDir)
+	$(hide) echo "<<<< apktood decode $(2) done"
 	$(hide) if [ x"$$(needUpdateRes)" != x"" ];then \
 			$(call modify_res_id,$$(tempSmaliDir)); \
-		else \
-			echo "<<< $$(tempSmaliDir) not need to update res id"; \
 		fi;
 	$(hide) $(call port_custom_app,$$(apkBaseName),$$(tempSmaliDir));
 	$(hide) $(call part_smali_append,$(1)/smali,$$(tempSmaliDir)/smali);
-	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_MERGED_TAG));
+	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG));
 	$(hide) if [ ! -d `dirname $(OUT_OBJ_SYSTEM)/$(2)` ]; then \
 			mkdir -p `dirname $(OUT_OBJ_SYSTEM)/$(2)`; \
 		fi;
@@ -352,7 +355,9 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 		fi;
 	$(hide) $(call custom_app,$$(apkBaseName),$$(tempSmaliDir));
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
-	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $(OUT_OBJ_SYSTEM)/$(2)
+	$(hide) echo ">>>> apktool build $(2) ..."
+	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $(OUT_OBJ_SYSTEM)/$(2) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY);
+	$(hide) echo "<<<< apktood build $(2) done"
 	$(hide) rm -rf "$$(tempSmaliDir)";
 	$(hide) echo "<<< build |target-files|SYSTEM|board_modify_apk| to $(OUT_OBJ_SYSTEM)/$(2) done"
 endef
@@ -454,9 +459,9 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) $(call part_smali_append,$(1)/smali,$$(tempSmaliDir)/smali);
 	$(hide) $(call custom_jar,$$(jarBaseName),$$(tempSmaliDir))
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
-	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_MERGED_TAG));
+	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG));
 	$(hide) mkdir -p $(OUT_OBJ_SYSTEM)
-	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $$@;
+	$(hide) $(APKTOOL) b $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) -o $$@
 	$(hide) rm -rf "$$(tempSmaliDir)";
 	$(hide) echo "<<< build |target-files|SYSTEM|board_modify_jar| to $$@ done"
 endef
@@ -513,9 +518,9 @@ $(OUT_OBJ_SYSTEM)/$(1): $(AAPT_BUILD_TARGET) $(MERGE_UPDATE_TXT) $(IF_ALL_RES) $
 	$(hide) $(call custom_app,$$(apkBaseName),$$(tempSmaliDir))
 	$(hide) $(call modify_res_id,$$(tempSmaliDir))
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
-	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_MERGED_TAG))
+	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG))
 	$(hide) mkdir -p `dirname $$@`
-	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $$@
+	$(hide) $(APKTOOL) b $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) -o $$@
 	$(hide) rm -rf $$(tempSmaliDir);
 	$(hide) echo "<<< build |target-files|SYSTEM|board_modify_resid_apk| to $$@ ..."
 endef

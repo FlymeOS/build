@@ -99,6 +99,8 @@ APKTOOL_BOARD_TAG  := board_$(PRJ_NAME)
 APKTOOL_VENDOR_TAG := vendor_$(PRJ_NAME)
 APKTOOL_MERGED_TAG := merged_$(PRJ_NAME)
 
+APKTOOL_FRAME_PATH_BOARD_MODIFY := ~/apktool/framework/board_modify/
+
 ################## board's bootanimation ####################
 BOARD_BOOTANIMATION  := $(PORT_ROOT)/build/bootanimations
 
