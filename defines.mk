@@ -340,7 +340,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) mkdir -p $(OUT_OBJ_APP)
 	$(hide) echo ">>>> apktool decode $(2) ..."
 	$(hide) $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) $(BOARD_SYSTEM)/$(2) -o $$(tempSmaliDir)
-	$(hide) echo "<<<< apktood decode $(2) done"
+	$(hide) echo "<<<< apktool decode $(2) done"
 	$(hide) if [ x"$$(needUpdateRes)" != x"" ];then \
 			$(call modify_res_id,$$(tempSmaliDir)); \
 		fi;
@@ -357,7 +357,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
 	$(hide) echo ">>>> apktool build $(2) ..."
 	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $(OUT_OBJ_SYSTEM)/$(2) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY);
-	$(hide) echo "<<<< apktood build $(2) done"
+	$(hide) echo "<<<< apktool build $(2) done"
 	$(hide) rm -rf "$$(tempSmaliDir)";
 	$(hide) echo "<<< build |target-files|SYSTEM|board_modify_apk| to $(OUT_OBJ_SYSTEM)/$(2) done"
 endef
