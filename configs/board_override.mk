@@ -4,28 +4,15 @@
 BOARD_PREBUILT_DIRS += \
 	media/audio \
 	app \
-	priv-app \
-	etc/channel_files
+	priv-app
 
 # add prebuilt files which should be override by board
 BOARD_PREBUILT_DEFAULT := \
 	bin/flymed \
-	bin/flymePerf \
 	bin/pppoe \
-	bin/gdbserver \
-	bin/hostapd_cli \
-	bin/keystore_cli \
 	bin/nmbd \
-	bin/pngtest \
-	bin/r \
-	bin/radiooptions \
-	bin/showlease \
 	bin/smbd \
 	bin/smbpasswd \
-	bin/tracepath \
-	bin/tracepath6 \
-	bin/traceroute6 \
-	bin/wpa_cli \
 	xbin/add-property-tag \
 	xbin/check-lost+found \
 	xbin/cpustats \

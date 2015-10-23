@@ -513,7 +513,7 @@ $(OUT_OBJ_SYSTEM)/$(1): $(AAPT_BUILD_TARGET) $(MERGE_UPDATE_TXT) $(IF_ALL_RES) $
 	$(hide) echo ">>> build |target-files|SYSTEM|board_modify_resid_apk| to $$@ ..."
 	$(hide) rm -rf "$$(tempSmaliDir)"
 	$(hide) mkdir -p "$$(tempSmaliDir)"
-	$(hide) $(APKTOOL) d --no-res -f -t $(APKTOOL_BOARD_TAG) $(AAPT_BUILD_TARGET) -o $$(tempSmaliDir) 2>/dev/null;
+	$(hide) $(APKTOOL) d -f -t $(APKTOOL_BOARD_TAG) $(AAPT_BUILD_TARGET) -o $$(tempSmaliDir) 2>/dev/null;
 	$(hide) $(call port_custom_app,$$(apkBaseName),$$(tempSmaliDir));
 	$(hide) $(call custom_app,$$(apkBaseName),$$(tempSmaliDir))
 	$(hide) $(call modify_res_id,$$(tempSmaliDir))

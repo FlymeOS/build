@@ -62,8 +62,6 @@ BOARD_PREBUILT_DIRS += \
 
 
 BOARD_PREBUILT += \
-    app/Bluetooth/lib/arm/libbluetooth_jni.so \
-    app/NfcNci/lib/arm/libnfc_nci_jni.so \
     app/PacProcessor/lib/arm/libjni_pacprocessor.so \
     app/PrintSpooler/lib/arm/libprintspooler_jni.so \
     bin/flymed \
@@ -285,19 +283,10 @@ BOARD_PREBUILT += \
 
 BOARD_PRESIGNED_APPS += \
     AliAppAccount.apk \
-    GmsCore.apk \
-    GoogleCalendarSyncAdapter.apk \
-    GoogleContactsSyncAdapter.apk \
-    GoogleFeedback.apk \
-    GoogleLoginService.apk \
-    GoogleServicesFramework.apk \
     IflytekSpeechService.apk \
     Life.apk \
-    Maps.apk \
     MzAccountPlugin.apk \
     NetworkLocation_baidu.apk \
-    Phonesky.apk \
-    Velvet.apk \
     qcrilmsgtunnel.apk \
 
 
