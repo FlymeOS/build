@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 1602158(Nexus 5) ==> builder.20150924152457_R(Nexus 5)
-# Date: 2015/09/24 16:22
+# version: from 1602158(Nexus 5) ==> builder.20151103052002_R(Nexus 5)
+# Date: 2015/11/03 10:22
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -102,15 +102,10 @@ BOARD_PREBUILT += \
     lib/libMzGameCenterLib-jni.so \
     lib/libRSSupport.so \
     lib/libRefocusModule.so \
-    lib/libTmsdk-2.0.7-mfr.so \
-    lib/libWnnEngDic.so \
-    lib/libWnnJpnDic.so \
-    lib/libams-1.1.4-64b-mfr.so \
     lib/libaudioinfo_jni.so \
     lib/libbdpush_V1_0.so \
     lib/libblur.so \
     lib/libbspatch.so \
-    lib/libdce-1.1.2-mfr.so \
     lib/libdlna_jni.so \
     lib/libeffects_filters.so \
     lib/libeffects_mosaic.so \
@@ -122,7 +117,6 @@ BOARD_PREBUILT += \
     lib/libimage_dehazing.so \
     lib/libimageproc.so \
     lib/libipc_pref.527.1.so \
-    lib/libjni_customizecenter_gauss_blur.so \
     lib/libjni_gallery_utils.so \
     lib/libjni_gauss_blur.so \
     lib/libkanbox_meizu_gallery_sdk.so \
@@ -147,7 +141,6 @@ BOARD_PREBUILT += \
     lib/libttspico.so \
     lib/libttsplusmsc.so \
     lib/libupdate-jni-1.0.1.2002.so \
-    lib/libwnndict.so \
     media/audio/alarms/After_school.ogg \
     media/audio/alarms/Beep.ogg \
     media/audio/alarms/Blues.ogg \
