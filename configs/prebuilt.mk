@@ -102,10 +102,13 @@ BOARD_PREBUILT += \
     lib/libMzGameCenterLib-jni.so \
     lib/libRSSupport.so \
     lib/libRefocusModule.so \
+    lib/libTmsdk-2.0.7-mfr.so \
+    lib/libams-1.1.4-64b-mfr.so \
     lib/libaudioinfo_jni.so \
     lib/libbdpush_V1_0.so \
     lib/libblur.so \
     lib/libbspatch.so \
+    lib/libdce-1.1.2-mfr.so \
     lib/libdlna_jni.so \
     lib/libeffects_filters.so \
     lib/libeffects_mosaic.so \
