@@ -82,16 +82,6 @@ define get_merged_installed_framework_params
 `ls ~/apktool/framework/[0-9]*-$(APKTOOL_MERGED_TAG).apk | sed 's/^/-I /g'`
 endef
 
-# get all files in the directory, only for makefile
-define get_all_files_in_dir
-$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f -o -type l; fi)))
-endef
-
-# get all smali files in the directory, only for find xx.jar.out, process "$" symbol
-define get_all_smali_files_in_dir
-$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f | sed 's/\$$/\$$$$/g' | tee /tmp/find; fi)))
-endef
-
 # update the apktool.yml, include tags and usesFramework
 define update_apktool_yml
 $(UPDATE_APKTOOL_YML_TOOLS) $(1) $(2)

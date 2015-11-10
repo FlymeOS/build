@@ -37,6 +37,16 @@ define getBaseName
 $(basename $(notdir $(1)))
 endef
 
+# get all files in the directory, only for makefile
+define get_all_files_in_dir
+$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f -o -type l; fi)))
+endef
+
+# get all smali files in the directory, only for find xx.jar.out, process "$" symbol
+define get_all_smali_files_in_dir
+$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f | sed 's/\$$/\$$$$/g' | tee /tmp/find; fi)))
+endef
+
 define change_bracket
 $(subst $(right_bracket),\$(right_bracket),$(subst $(left_bracket),\$(left_bracket),$(1)))
 endef
@@ -192,5 +202,17 @@ define resetPositionJar
 $(eval PRE_SET := $($(1))) \
 $(eval $(1) := )\
 $(foreach pos,$(PRE_SET),$(eval $(1) += $(call posOfJar,$(pos),$(2)))) \
+$(eval PRE_SET := )
+endef
+
+define posOfDir
+$(eval _FIND_DIRS := $(shell if [ -d $(2) ]; then find $(2) -type d -name $(1); fi;)) \
+$(foreach d,$(_FIND_DIRS),$(call get_all_files_in_dir,$(d)))
+endef
+
+define getAllFilesInApp
+$(eval PRE_SET := $($(1))) \
+$(eval $(1) := )\
+$(foreach pos,$(PRE_SET),$(eval $(1) += $(call posOfDir,$(pos),$(2)))) \
 $(eval PRE_SET := )
 endef

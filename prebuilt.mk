@@ -4,9 +4,12 @@
 PREBUILT_TARGET      :=
 BOARD_PREBUILT_FILES :=
 
+
+
 ################# prepare-vendor ##############################
 # remove the files which in vendor_remove_dirs
 VENDOR_PREBUILT_FILES := $(ALL_VENDOR_FILES)
+
 $(foreach removeDirs,$(VENDOR_REMOVE_DIRS), \
     $(eval VENDOR_PREBUILT_FILES:=$(filter-out $(removeDirs)/%,$(VENDOR_PREBUILT_FILES))))
 
@@ -18,8 +21,25 @@ VENDOR_PREBUILT_FILES:=$(filter-out $(VENDOR_REMOVE_FILES),$(VENDOR_PREBUILT_FIL
 VENDOR_PREBUILT_FILES:=$(filter-out $(PRJ_CUSTOM_TARGET), $(VENDOR_PREBUILT_FILES))
 
 VENDOR_PREBUILT_FILES += $(VENDOR_PREBUILT_APPS)
+
+VENDOR_SAVED_APP_FILES := $(vendor_saved_apps)
+$(call getAllFilesInApp,VENDOR_SAVED_APP_FILES,$(VENDOR_SYSTEM))
+
+VENDOR_SAVED_APP_FILES := $(filter-out %.apk,$(VENDOR_SAVED_APP_FILES))
+VENDOR_SAVED_APP_FILES := $(filter-out %.odex,$(VENDOR_SAVED_APP_FILES))
+
+VENDOR_SAVED_APP_FILES := $(patsubst $(VENDOR_SYSTEM)/%,%,$(VENDOR_SAVED_APP_FILES))
+VENDOR_PREBUILT_FILES += $(VENDOR_SAVED_APP_FILES)
+
 ############## prepare board prebuilt #########################
 # filter the target which are not prebuilt
+
+BOARD_REMOVE_APP_FILES := $(board_remove_apps)
+$(call getAllFilesInApp,BOARD_REMOVE_APP_FILES,$(BOARD_SYSTEM_FOR_POS))
+
+BOARD_REMOVE_APP_FILES := $(patsubst $(BOARD_SYSTEM_FOR_POS)/%,%,$(BOARD_REMOVE_APP_FILES))
+BOARD_PREBUILT := $(filter-out $(BOARD_REMOVE_APP_FILES),$(BOARD_PREBUILT))
+
 BOARD_PREBUILT_FILES += $(strip $(BOARD_PREBUILT_APPS) $(BOARD_PREBUILT))
 BOARD_PREBUILT_FILES := $(sort $(strip $(filter-out $(PRJ_CUSTOM_TARGET) $(BOARD_MODIFY_RESID_FILES),$(BOARD_PREBUILT_FILES))))
 
@@ -40,6 +60,7 @@ $(foreach apk,$(VENDOR_SIGN_APPS),\
 #$(info # VENDOR_SIGN_APPS:$(VENDOR_SIGN_APPS))
 
 VENDOR_PREBUILT_FILES := $(filter-out %.apk,$(VENDOR_PREBUILT_FILES))
+
 ################## define the prebuilt targets ###############
 
 $(foreach file,$(VENDOR_PREBUILT_FILES),\
