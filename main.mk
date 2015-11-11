@@ -387,8 +387,7 @@ $(call resetPosition,BOARD_MODIFY_APPS,$(BOARD_SYSTEM_FOR_POS))
 $(foreach apk,$(BOARD_MODIFY_APPS),\
     $(eval $(call board_modify_apk_build,$(PRJ_ROOT)/$(call getBaseName,$(apk)),$(apk))))
 
-BOARD_MODIFY_RESID_FILES := $(filter-out $(PRJ_CUSTOM_TARGET),$(BOARD_MODIFY_RESID_FILES))
-#$(info # BOARD_MODIFY_RESID_FILES:$(BOARD_MODIFY_RESID_FILES))
+BOARD_MODIFY_RESID_FILES := $(filter-out $(PRJ_CUSTOM_TARGET) $(BOARD_REMOVE_APP_FILES),$(BOARD_MODIFY_RESID_FILES))
 
 $(foreach apk,$(BOARD_MODIFY_RESID_FILES),\
     $(eval AAPT_BUILD_TARGET:=$(BOARD_SYSTEM)/$(apk)) \

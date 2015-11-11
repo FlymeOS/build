@@ -34,7 +34,7 @@ VENDOR_PREBUILT_FILES += $(VENDOR_SAVED_APP_FILES)
 ############## prepare board prebuilt #########################
 # filter the target which are not prebuilt
 
-BOARD_REMOVE_APP_FILES := $(board_remove_apps)
+BOARD_REMOVE_APP_FILES := $(board_remove_apps) $(vendor_saved_apps)
 $(call getAllFilesInApp,BOARD_REMOVE_APP_FILES,$(BOARD_SYSTEM_FOR_POS))
 
 BOARD_REMOVE_APP_FILES := $(patsubst $(BOARD_SYSTEM_FOR_POS)/%,%,$(BOARD_REMOVE_APP_FILES))
