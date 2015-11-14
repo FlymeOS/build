@@ -25,6 +25,13 @@ ifneq ($(wildcard $(PREBUILT_MK)),)
 include $(PREBUILT_MK)
 endif #ifneq ($(wildcard $(PREBUILT_MK)),)
 
+PREBUILT_64_MK := $(PORT_BUILD)/configs/prebuilt_64.mk
+ifneq ($(wildcard $(PREBUILT_64_MK)),)
+ifneq ($(wildcard $(VENDOR_SYSTEM)/lib64),)
+include $(PREBUILT_64_MK)
+endif
+endif
+
 include $(PORT_BUILD)/configs/black_prebuilt.mk
 BOARD_PREBUILT := $(filter-out $(BLACK_LIST_DIRS) $(BLACK_LIST),$(BOARD_PREBUILT))
 BOARD_PREBUILT_DIRS := $(patsubst %/,%,$(filter-out $(BLACK_LIST_DIRS),$(patsubst %,%/,$(BOARD_PREBUILT_DIRS))))
