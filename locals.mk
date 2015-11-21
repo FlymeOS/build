@@ -203,7 +203,7 @@ CONVERT_FILESYSTEM   := $(PORT_ROOT)/build/tools/convert_filesystem.py
 OUT_MAC_PERMISSIONS_XML := $(OUT_SYSTEM)/etc/security/mac_permissions.xml
 
 ####################### board's release ###################
-BOARD_RELEASE := $(PORT_ROOT)/flyme/release
+BOARD_RELEASE := $(PORT_ROOT)/flyme/release/arm
 
 ################# target-files zips #######################
 PRJ_OUT_TARGET_ZIP := $(OUT_DIR)/target-files.zip

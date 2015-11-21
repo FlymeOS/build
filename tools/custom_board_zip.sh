@@ -2,6 +2,10 @@
 
 BOARD_ZIP_DIR=$1
 DENSITY=$2
+
+VENDOR_SYSTEM=$3
+BOARD_RELEASE=$4
+
 THEME_FULL_RES=$BOARD_ZIP_DIR/theme_full_res
 
 function custom_theme()
@@ -26,4 +30,23 @@ function custom_theme()
 	fi
 }
 
+function custom_arm64
+{
+	if [ "x$VENDOR_SYSTEM" != "x" ] && [ -d "$VENDOR_SYSTEM/lib64" ]; then
+		if [ "x$BOARD_RELEASE" != "x" ] ; then
+			ARM_64="$(dirname $BOARD_RELEASE)/arm64"
+			if [ -d "$ARM_64" ]; then
+				for f in $(ls $ARM_64); do
+					if [ "$f" == "SYSTEM" ]; then
+						cp -rf $ARM_64/$f/* $BOARD_ZIP_DIR/system
+					else
+						cp -rf $ARM_64/$f $BOARD_ZIP_DIR
+					fi
+				done
+			fi
+		fi
+	fi
+}
+
 custom_theme
+custom_arm64

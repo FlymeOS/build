@@ -8,7 +8,7 @@ $(PREPARE_SOURCE):
 ifneq ($(THEME_RES),)
 	$(hide) unzip -q -o $(THEME_RES) -d $(BOARD_DIR)/theme_full_res
 endif
-	$(hide) $(PORT_CUSTOM_BOARD_ZIP) $(BOARD_DIR) $(DENSITY)
+	$(hide) $(PORT_CUSTOM_BOARD_ZIP) $(BOARD_DIR) $(DENSITY) $(VENDOR_SYSTEM) $(BOARD_RELEASE)
 	$(hide) if [ ! -d $(BOARD_FRAMEWORK) ] \
 		|| [ ! -d $(BOARD_SYSTEM)/lib ] \
 		|| [ ! -d $(BOARD_SYSTEM)/app ];then \
