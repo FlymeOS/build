@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 1602158(Nexus 5) ==> builder.20151103052002_R(Nexus 5)
-# Date: 2015/11/03 10:22
+# version: from 1602158(Nexus 5) ==> builder.20151216140920_R(Nexus 5)
+# Date: 2015/12/16 14:56
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -20,6 +20,7 @@ BOARD_PREBUILT_DIRS += \
     app/MzMPay \
     app/MzSecurity \
     app/MzSetupWizard \
+    app/MzSimContacts \
     app/MzSmartComService \
     app/MzSnsSyncService \
     app/MzSyncService \
