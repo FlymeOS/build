@@ -37,6 +37,7 @@ OUTPUT_OTA_PACKAGE=$OUT_DIR/vendor_ota.zip
 FROM_OTA=0
 ROOT_STATE="system_root"
 
+FROM_RECOVERY=0
 ######## Error Exit Num ##########
 ERR_USB_NOT_CONNECTED=151
 ERR_DEVICE_NOT_ROOTED=152
@@ -83,10 +84,19 @@ function waitForDeviceOnline {
     fi
 }
 
+function checkRecovery {
+    if adb devices | grep -i "recovery" > /dev/null; then
+        FROM_RECOVERY=1
+    	adb shell mount -o remount,rw /system
+    else
+        FROM_RECOVERY=0 
+    fi
+}
 # check system root state
 function checkRootState {
     echo ">> Check root state of phone ..."
     waitForDeviceOnline
+    if [ $FROM_RECOVERY == 0 ];then
     SECURE_PROP=$(adb shell cat /default.prop | grep -o "ro.secure=\w")
     DEBUG_PROP=$(adb shell cat /default.prop | grep -o "ro.debuggable=\w")
 
@@ -101,6 +111,9 @@ function checkRootState {
     else
         echo "<< ERROR: Not a root phone, please root this device firstly!!"
         exit $ERR_DEVICE_NOT_ROOTED;
+	    fi
+    else
+	ROOT_STATE="kernel_root"
     fi
 
     echo "<< Check root state of phone done."
@@ -302,6 +315,7 @@ function zipTargetFiles {
 
 # pull files and info from phone and build a target file
 function targetFromPhone {
+    checkRecovery
     checkRootState
     copyTargetFilesTemplate
 
