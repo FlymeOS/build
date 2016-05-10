@@ -27,7 +27,7 @@ endif #ifneq ($(wildcard $(PREBUILT_MK)),)
 
 PREBUILT_64_MK := $(PORT_BUILD)/configs/prebuilt_64.mk
 ifneq ($(wildcard $(PREBUILT_64_MK)),)
-ifneq ($(wildcard $(VENDOR_SYSTEM)/lib64),)
+ifeq ($(shell grep "ro.product.cpu.abi=" $(VENDOR_SYSTEM)/build.prop |awk -F\= '{print $$2}'|head -1 ),arm64-v8a)
 include $(PREBUILT_64_MK)
 endif
 endif
