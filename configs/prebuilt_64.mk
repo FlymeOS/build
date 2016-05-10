@@ -27,4 +27,9 @@ BOARD_PREBUILT += \
     lib64/libRefocusModule.so \
     lib64/libblur.so \
     lib64/libmeizucamera.so \
-    lib64/libnative_blur.so
+    lib64/libnative_blur.so \
+    lib64/libams-1.1.5-m-mfr.so \
+    lib64/libams-1.1.6-64b-mfr.so \
+    lib64/libdce-1.1.5-mfr.so \
+    lib64/libjni_glrenderer.so \
+    lib64/libTmsdk-2.0.8-mfr.so
