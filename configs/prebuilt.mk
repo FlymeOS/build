@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 1602158(Nexus 5) ==> builder.20151216140920_R(Nexus 5)
-# Date: 2015/12/16 14:56
+# version: from 2167285(Nexus 5) ==> builder.20160513155349_R(Nexus 5)
+# Date: 2016/05/13 16:18
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -444,10 +444,10 @@ BOARD_PRESIGNED_APPS += \
     MzAccountPlugin.apk \
     NetworkLocation_baidu.apk \
     O2OService.apk \
+    Reader.apk \
     Search.apk \
     SoundRecorder.apk \
     Video.apk \
-    qcrilmsgtunnel.apk \
     vlife-sdk-mx.apk \
 
 
