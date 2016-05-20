@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160513155349_R(Nexus 5)
-# Date: 2016/05/13 16:18
+# version: from 2167285(Nexus 5) ==> builder.20160520133505_R(Nexus 5)
+# Date: 2016/05/20 15:45
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -23,6 +23,7 @@ BOARD_PREBUILT_DIRS += \
     app/MzCompaign \
     app/MzCountService \
     app/MzMPay \
+    app/MzPay \
     app/MzPhoneLocationService \
     app/MzSecurity \
     app/MzSetupWizard \
@@ -55,6 +56,7 @@ BOARD_PREBUILT_DIRS += \
     priv-app/Dialer \
     priv-app/EBook \
     priv-app/Email \
+    priv-app/ExperienceDataSync \
     priv-app/FlymeLauncher \
     priv-app/Gallery \
     priv-app/Keyguard \
@@ -117,6 +119,10 @@ BOARD_PREBUILT += \
     fonts/SourceHanSansJP-Normal.ttf \
     fonts/SourceHanSansKR-Normal.ttf \
     fonts/ZawgyiOne.ttf \
+    fonts/NotoColorEmoji.ttf \
+    fonts/NotoSansHans-Regular.otf \
+    fonts/NotoSansHant-Regular.otf \
+    fonts/NotoSansKR-Regular.otf \
     framework/com.meizu.camera.jar \
     framework/flyme-framework.jar \
     framework/flyme-telephony-common.jar \
@@ -128,6 +134,7 @@ BOARD_PREBUILT += \
     lib/libFace.so \
     lib/libHAOMA.so \
     lib/libIvw35.so \
+    lib/libIvw40.so \
     lib/libMzGameCenterLib-jni.so \
     lib/libRSSupport.so \
     lib/libRefocusModule.so \
@@ -434,7 +441,6 @@ BOARD_PREBUILT += \
 
 BOARD_PRESIGNED_APPS += \
     AliAppAccount.apk \
-    Calculator.apk \
     EBook.apk \
     IflytekSpeechService.apk \
     Life.apk \
