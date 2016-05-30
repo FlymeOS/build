@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160520133505_R(Nexus 5)
-# Date: 2016/05/20 15:45
+# version: from 2167285(Nexus 5) ==> builder.20160527132623_R(Nexus 5)
+# Date: 2016/05/27 15:45
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -73,7 +73,6 @@ BOARD_PREBUILT_DIRS += \
     priv-app/NetContactService \
     priv-app/NetworkLocation_baidu \
     priv-app/PowerSaveModeHome \
-    priv-app/Scanner \
     priv-app/SoundRecorder \
     priv-app/SystemUI/lib \
     priv-app/Tag \
@@ -441,6 +440,7 @@ BOARD_PREBUILT += \
 
 BOARD_PRESIGNED_APPS += \
     AliAppAccount.apk \
+    Calculator.apk \
     EBook.apk \
     IflytekSpeechService.apk \
     Life.apk \
