@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160527132623_R(Nexus 5)
-# Date: 2016/05/27 15:45
+# version: from 2167285(Nexus 5) ==> builder.20160606184036_R(Nexus 5)
+# Date: 2016/06/06 21:16
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -63,7 +63,6 @@ BOARD_PREBUILT_DIRS += \
     priv-app/Life \
     priv-app/InCallUI \
     priv-app/LogReport \
-    priv-app/LuckyMoney \
     priv-app/Mms \
     priv-app/Music \
     priv-app/MzAccountPlugin \
@@ -75,6 +74,7 @@ BOARD_PREBUILT_DIRS += \
     priv-app/PowerSaveModeHome \
     priv-app/SoundRecorder \
     priv-app/SystemUI/lib \
+    priv-app/SystemUITools \
     priv-app/Tag \
     priv-app/Video \
     priv-app/VoiceAssistant \
@@ -122,6 +122,7 @@ BOARD_PREBUILT += \
     fonts/NotoSansHans-Regular.otf \
     fonts/NotoSansHant-Regular.otf \
     fonts/NotoSansKR-Regular.otf \
+    fonts/SmartZawgyi.ttf \
     framework/com.meizu.camera.jar \
     framework/flyme-framework.jar \
     framework/flyme-telephony-common.jar \
@@ -143,13 +144,14 @@ BOARD_PREBUILT += \
     lib/libamapv303.so \
     lib/libamapv303ex.so \
     lib/libams-1.1.5-m-mfr.so \
-    lib/libams-1.1.6-64b-mfr.so \
+    lib/libams-1.1.7-m-mfr.so \
+    lib/libams-1.1.7-mfr.so \
     lib/libaudioinfo_jni.so \
     lib/libbdpush_V1_0.so \
     lib/libblur.so \
     lib/libbspatch.so \
     lib/libdce-1.1.2-mfr.so \
-    lib/libdce-1.1.5-mfr.so \
+    lib/libdce-1.1.6-mfr.so \
     lib/libdlna_jni.so \
     lib/libeffects_filters.so \
     lib/libeffects_mosaic.so \
