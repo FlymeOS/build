@@ -2,70 +2,72 @@
 
 # add prebuilt dirs which should be override by board
 BOARD_PREBUILT_DIRS += \
-	media/audio \
-	app \
-	priv-app
+    media/audio \
+    app \
+    priv-app
 
 # add prebuilt files which should be override by board
 BOARD_PREBUILT_DEFAULT := \
-	bin/flymed \
-	bin/pppoe \
-	bin/nmbd \
-	bin/smbd \
-	bin/smbpasswd \
-	xbin/add-property-tag \
-	xbin/check-lost+found \
-	xbin/cpustats \
-	xbin/dhdutil \
-	xbin/fio \
-	xbin/ksminfo \
-	xbin/latencytop \
-	xbin/librank \
-	xbin/ltrace \
-	xbin/memtrack \
-	xbin/memtrack_share \
-	xbin/micro_bench \
-	xbin/micro_bench_static \
-	xbin/procmem \
-	xbin/procrank \
-	xbin/puncture_fs \
-	xbin/rawbu \
-	xbin/sane_schedstat \
-	xbin/showmap \
-	xbin/showslab \
-	xbin/sqlite3 \
-	xbin/strace \
-	xbin/su \
-	xbin/taskstats \
-        framework/flyme-res/flyme-res.apk \
-        framework/com.meizu.camera.jar \
-        framework/meizu2_jcifs.jar \
-        framework/telephony-meizu.jar
+    bin/flymed \
+    bin/pppoe \
+    bin/nmbd \
+    bin/smbd \
+    bin/smbpasswd \
+    xbin/add-property-tag \
+    xbin/check-lost+found \
+    xbin/cpustats \
+    xbin/dhdutil \
+    xbin/fio \
+    xbin/ksminfo \
+    xbin/latencytop \
+    xbin/librank \
+    xbin/ltrace \
+    xbin/memtrack \
+    xbin/memtrack_share \
+    xbin/micro_bench \
+    xbin/micro_bench_static \
+    xbin/procmem \
+    xbin/procrank \
+    xbin/puncture_fs \
+    xbin/rawbu \
+    xbin/sane_schedstat \
+    xbin/showmap \
+    xbin/showslab \
+    xbin/sqlite3 \
+    xbin/strace \
+    xbin/su \
+    xbin/taskstats \
+    framework/flyme-res/flyme-res.apk \
+    framework/com.meizu.camera.jar \
+    framework/meizu2_jcifs.jar \
+    framework/telephony-meizu.jar
 
 $(call resetPosition,BOARD_PREBUILT_DEFAULT,$(BOARD_SYSTEM_FOR_POS))
 BOARD_PREBUILT += $(BOARD_PREBUILT_DEFAULT)
 
 # define the apk and jars which need modify the res id
 BOARD_MODIFY_RESID_FILES := \
-        priv-app/Telecom/Telecom.apk \
-        priv-app/TeleService/TeleService.apk \
-        priv-app/Dialer/Dialer.apk \
-        priv-app/ContactsProvider/ContactsProvider.apk \
-        priv-app/DownloadProvider/DownloadProvider.apk \
-        priv-app/Settings/Settings.apk \
-        priv-app/Browser/Browser.apk \
-        priv-app/Contacts/Contacts.apk \
-        priv-app/SystemUI/SystemUI.apk \
-        priv-app/SettingsProvider/SettingsProvider.apk \
-        priv-app/Keyguard/Keyguard.apk \
-        priv-app/TelephonyProvider/TelephonyProvider.apk \
-        priv-app/MediaProvider/MediaProvider.apk \
-        app/MzSimContacts/MzSimContacts.apk \
-        app/MzBlockService/MzBlockService.apk \
-        app/PackageInstaller/PackageInstaller.apk \
-        app/Mms/Mms.apk \
-	framework/flyme-telephony-common.jar \
-	framework/flyme-framework.jar
+    priv-app/Telecom/Telecom.apk \
+    priv-app/TeleService/TeleService.apk \
+    priv-app/Dialer/Dialer.apk \
+    priv-app/ContactsProvider/ContactsProvider.apk \
+    priv-app/DownloadProvider/DownloadProvider.apk \
+    priv-app/Settings/Settings.apk \
+    priv-app/Browser/Browser.apk \
+    priv-app/Contacts/Contacts.apk \
+    priv-app/SystemUI/SystemUI.apk \
+    priv-app/SettingsProvider/SettingsProvider.apk \
+    priv-app/Keyguard/Keyguard.apk \
+    priv-app/ManagedProvisioning/ManagedProvisioning.apk \
+    priv-app/InCallUI/InCallUI.apk \
+    priv-app/TelephonyProvider/TelephonyProvider.apk \
+    priv-app/MediaProvider/MediaProvider.apk \
+    app/MzSimContacts/MzSimContacts.apk \
+    app/MzBlockService/MzBlockService.apk \
+    app/PackageInstaller/PackageInstaller.apk \
+    app/Mms/Mms.apk \
+    framework/flyme-telephony-common.jar \
+    framework/flyme-framework.jar
 
 $(call resetPosition,BOARD_MODIFY_RESID_FILES,$(BOARD_SYSTEM_FOR_POS))
 
@@ -142,10 +144,10 @@ BOARD_PROPERTY_FOLLOW_BASE := \
 BOARD_SERVICES += \
 
 BOARD_PREBUILT_PACKAGE_framework := \
-	flyme \
-	meizu \
-	com/flyme \
-	com/meizu
+    flyme \
+    meizu \
+    com/flyme \
+    com/meizu
 
 # if the app was set in REDUCE_RESOURCES_EXCLUDE_APPS, it will not reduce resources
 REDUCE_RESOURCES_EXCLUDE_APPS += BaiduCamera
@@ -156,18 +158,18 @@ ifeq ($(filter Phone,$(vendor_modify_apps)),)
 ifneq ($(strip $(call isExist,Phone.apk,$(VENDOR_SYSTEM))),)
 ifneq ($(strip $(call isExist,Phone.apk,$(BOARD_SYSTEM_FOR_POS))),)
 NEED_COMPELETE_MODULE_PAIR += \
-	app/Phone.apk:Phone
+    app/Phone.apk:Phone
 endif # ifneq ($(call posOfApp,Phone,$(BOARD_SYSTEM_FOR_POS)),)
 endif # ifneq ($(call posOfApp,Phone,$(VENDOR_SYSTEM)),)
 endif # ifeq ($(filter Phone,$(vendor_modify_apps)),)
 
 ifeq ($(filter android.policy,$(vendor_modify_jars)),)
 NEED_COMPELETE_MODULE_PAIR += \
-	framework/android.policy.jar:android.policy.jar.out
+    framework/android.policy.jar:android.policy.jar.out
 endif
 
 VENDOR_COM_MODULE_PAIR := \
-	framework/core.jar:core.jar.out
+    framework/core.jar:core.jar.out
 
 # BOARD_PRESIGNED_APPS set here is to proguard, if can not find apkcerts.txt, this would worked!
 BOARD_PRESIGNED_APPS_DEFAULT := \

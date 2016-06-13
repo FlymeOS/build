@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160606184036_R(Nexus 5)
-# Date: 2016/06/06 21:16
+# version: from 2167285(Nexus 5) ==> builder.20160613062954_R(Nexus 5)
+# Date: 2016/06/13 16:41
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -49,6 +49,7 @@ BOARD_PREBUILT_DIRS += \
     app/webview \
     customizecenter \
     framework/flyme-res \
+    priv-app/AMapNetworkLocation_meizu \
     priv-app/AliAppAccount \
     priv-app/Browser \
     priv-app/Contacts \
@@ -70,7 +71,6 @@ BOARD_PREBUILT_DIRS += \
     priv-app/MzCallSetting \
     priv-app/MzInput \
     priv-app/NetContactService \
-    priv-app/NetworkLocation_baidu \
     priv-app/PowerSaveModeHome \
     priv-app/SoundRecorder \
     priv-app/SystemUI/lib \
@@ -78,7 +78,7 @@ BOARD_PREBUILT_DIRS += \
     priv-app/Tag \
     priv-app/Video \
     priv-app/VoiceAssistant \
-    tts \
+    tts
 
 
 BOARD_PREBUILT += \
@@ -112,6 +112,7 @@ BOARD_PREBUILT += \
     fonts/DINPro-Regular.otf \
     fonts/DroidSansFallback-flyme.ttf \
     fonts/Flyme-Light.ttf \
+    fonts/SmartZawgyi.ttf \
     fonts/SourceHanSansCN-ExtraLight.ttf \
     fonts/SourceHanSansCN-Light.otf \
     fonts/SourceHanSansCN-Normal.ttf \
@@ -437,7 +438,7 @@ BOARD_PREBUILT += \
     media/audio/ui/recorder_prompt_end.ogg \
     media/launcher.xml \
     media/shutanimation.zip \
-    priv-app/DefaultContainerService/lib/arm/libdefcontainer_jni.so \
+    priv-app/DefaultContainerService/lib/arm/libdefcontainer_jni.so
 
 
 BOARD_PRESIGNED_APPS += \
@@ -450,13 +451,12 @@ BOARD_PRESIGNED_APPS += \
     Map.apk \
     Music.apk \
     MzAccountPlugin.apk \
-    NetworkLocation_baidu.apk \
     O2OService.apk \
     Reader.apk \
     Search.apk \
     SoundRecorder.apk \
     Video.apk \
-    vlife-sdk-mx.apk \
+    vlife-sdk-mx.apk
 
 
  # This is the end.
