@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160613062954_R(Nexus 5)
-# Date: 2016/06/13 16:41
+# version: from 2167285(Nexus 5) ==> builder.20160624184842_R(Nexus 5)
+# Date: 2016/06/27 15:01
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -8,6 +8,7 @@ BOARD_PREBUILT_DIRS += \
     app/Calendar \
     app/Camera \
     app/CloudDisk \
+    app/DesktopBackup \
     app/ExperienceDataSync \
     app/FileManager \
     app/GameCenter \
