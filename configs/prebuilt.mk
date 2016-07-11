@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160624184842_R(Nexus 5)
-# Date: 2016/06/27 15:01
+# version: from 2167285(Nexus 5) ==> builder.20160708145941_R(Nexus 5)
+# Date: 2016/07/11 16:53
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -168,6 +168,7 @@ BOARD_PREBUILT += \
     lib/libjni_gallery_utils.so \
     lib/libjni_gauss_blur.so \
     lib/libjni_glrenderer.so \
+    lib/libjni_systemuitools.so \
     lib/libkanbox_meizu_gallery_sdk.so \
     lib/liblocSDK4d.so \
     lib/liblocSDK5c.so \
