@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160708145941_R(Nexus 5)
-# Date: 2016/07/11 16:53
+# version: from 2167285(Nexus 5) ==> builder.20160718162406_R(Nexus 5)
+# Date: 2016/07/18 18:50
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -115,7 +115,6 @@ BOARD_PREBUILT += \
     fonts/Flyme-Light.ttf \
     fonts/SmartZawgyi.ttf \
     fonts/SourceHanSansCN-ExtraLight.ttf \
-    fonts/SourceHanSansCN-Light.otf \
     fonts/SourceHanSansCN-Normal.ttf \
     fonts/SourceHanSansJP-Normal.ttf \
     fonts/SourceHanSansKR-Normal.ttf \
