@@ -73,6 +73,7 @@ BOARD_PREBUILT_DIRS += \
     priv-app/MzInput \
     priv-app/NetContactService \
     priv-app/PowerSaveModeHome \
+    priv-app/Search \
     priv-app/SoundRecorder \
     priv-app/SystemUI/lib \
     priv-app/SystemUITools \
