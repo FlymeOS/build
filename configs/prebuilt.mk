@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160718162406_R(Nexus 5)
-# Date: 2016/07/18 18:50
+# version: from 2167285(Nexus 5) ==> builder.20160919161111_R(Nexus 5)
+# Date: 2016/09/19 17:16
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -161,6 +161,7 @@ BOARD_PREBUILT += \
     lib/libentryexpro.so \
     lib/libexif_gallery.so \
     lib/libfile_jni.so \
+    lib/libfilterUtils.so \
     lib/libimage_codec.so \
     lib/libimage_dehazing.so \
     lib/libimageproc.so \

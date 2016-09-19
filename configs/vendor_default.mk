@@ -14,7 +14,7 @@ vendor_remove_files += \
 	media/shutaudio.mp3 \
 	media/shutanimation.zip \
 	media/shutdownanimation.zip \
-        recovery-from-boot.p
+    recovery-from-boot.p
 
 VENDOR_REMOVE_DIRS  := $(sort $(strip $(vendor_remove_dirs)))
 VENDOR_REMOVE_FILES := $(sort $(strip $(vendor_remove_files)))
