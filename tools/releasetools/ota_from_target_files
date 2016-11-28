@@ -520,7 +520,7 @@ def WriteFullOTAPackage(input_zip, output_zip):
       info_dict=OPTIONS.info_dict)
 
   has_recovery_patch = HasRecoveryPatch(input_zip)
-  block_based = OPTIONS.block_based and has_recovery_patch
+  block_based = OPTIONS.block_based
 
   if not OPTIONS.omit_prereq:
     ts = GetBuildProp("ro.build.date.utc", OPTIONS.info_dict)
@@ -689,6 +689,9 @@ endif;
   script.AddToZip(input_zip, output_zip, input_path=OPTIONS.updater_binary)
   WriteMetadata(metadata, output_zip)
 
+  if block_based:
+    common.ZipWriteStr(output_zip, "system/build.prop",
+                       ""+input_zip.read("SYSTEM/build.prop"))
 
 def WritePolicyConfig(file_context, output_zip):
   f = open(file_context, 'r');

@@ -82,6 +82,9 @@ PRIVATE_PRODUCT_AAPT_PREF_CONFIG := $(DENSITY)
 ###################### Makefile ###########################
 PRJ_MAKEFILE       := $(PRJ_ROOT)/Makefile
 
+###################### boot.img.out #######################
+PRJ_BOOT_IMG_OUT   := $(PRJ_ROOT)/boot.img.out
+
 ##################### board zip ###########################
 BOARD_DIR          := $(PRJ_ROOT)/board
 BOARD_ZIP          := $(BOARD_DIR)/board.zip
@@ -182,6 +185,7 @@ METHOD_TO_BOSP_PYTHON_JOB := $(AUTOFIX)/.methodtobosp_python
 SMALI_TO_BOSP_PYTHON_JOB := $(AUTOFIX)/.smalitobosp_python
 
 ################ merged_target_files ######################
+OUT_BOOT             := $(OUT_TARGET_DIR)/BOOT
 OUT_BOOTABLE_IMAGES  := $(OUT_TARGET_DIR)/BOOTABLE_IMAGES
 OUT_META             := $(OUT_TARGET_DIR)/META
 OUT_OTA              := $(OUT_TARGET_DIR)/OTA

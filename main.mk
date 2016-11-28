@@ -40,7 +40,9 @@ ota fullota otapackage:
 	@echo "   make otadiff => build an Incremental OTA Package, with preparing       "
 	@echo "         target_files.zip of previous version in current directory.       "
 	@echo "   make otadiff PRE=xx/xx/target_files_xx.zip => specify previous package."
+ifeq ($(strip $(PRODUCE_BLOCK_BASED_OTA)),false)
 	@echo "   make otadiff PRE=xx/xx/ota_xx.zip => specify previous ota package.     "
+endif
 	@echo "=========================================================================="
 
 .PHONY: ota.phone
@@ -546,6 +548,16 @@ OTA $(OUT_OTA): $(strip $(call get_all_files_in_dir,$(VENDOR_OTA))) $(strip $(ca
 	$(hide) if [ -f $(PRJ_UPDATER_SCRIPT_OVERLAY) ]; then cp $(PRJ_UPDATER_SCRIPT_OVERLAY) $(OUT_OTA); fi
 	$(hide) echo "<< generate |target-files|OTA| done";
 
+####################### BOOT ############################
+.PHONY: BOOT
+OTA_TARGETS += BOOT
+BOOT $(OUT_BOOT):
+	$(hide) echo ">> generate |target-files|BOOT| ...";
+	$(hide) rm -rf $(OUT_BOOT);
+	$(hide) mkdir -p $(OUT_BOOT)/RAMDISK;
+	$(hide) cp -rf $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts $(OUT_BOOT)/RAMDISK/file_contexts;
+	$(hide) echo "<< generate |target-files|BOOT| done";
+
 ################# update the apk certs #################
 .PHONY: updateapkcerts
 updateapkcerts: $(OUT_META)/apkcerts.txt
@@ -685,7 +697,7 @@ $(PRJ_FULL_OTA_ZIP): $(OUT_TARGET_ZIP) $(OUT_LOGO_BIN)
 	$(hide) echo $(PRJ_FULL_OTA_ZIP) > $(PRJ_SAVED_OTA_NAME)
 	$(hide) echo $(OUT_TARGET_ZIP) > $(PRJ_SAVED_TARGET_NAME)
 	$(hide) $(OTA_FROM_TARGET_FILES) \
-			$(if $(filter true,$(PRODUCE_BLOCK_BASED_OTA)),--block) \
+			$(if $(filter false,$(PRODUCE_BLOCK_BASED_OTA)),,--block) \
 			--binary $(PRJ_UPDATE_BINARY_OVERLAY) \
 			--no_prereq \
 			-e $(PRJ_UPDATER_SCRIPT_PART) \

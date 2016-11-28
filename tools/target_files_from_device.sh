@@ -115,8 +115,51 @@ function copyTargetFilesTemplate {
     rm -f $OEM_TARGET_ZIP
     mkdir -p $OEM_TARGET_DIR
     cp -r $TARGET_FILES_TEMPLATE_DIR/* $OEM_TARGET_DIR
+    updateSystemPartitionSize
     echo "<< copy $TARGET_FILES_TEMPLATE_DIR to $OEM_TARGET_DIR ..."
 }
+
+# update system partition size
+#################################################################################################
+# This function is used to get the size of the system partition.                                #
+# If you have built the device, you can refer to the following commands                         #
+# through the adb shell to get the correct partition information.                               #
+#################################################################################################
+# shell@Flyme:/ #su                                                                             #
+#                                                                                               #
+# root@Flyme :/ #mount                                                                          #
+# *** Find the system mount ==> /dev/block/platform/mtk-msdc.0/by-name/system ***               #
+#                                                                                               #
+# root@Flyme :/ ls -l /dev/block/platform/mtk-msdc.0/by-name/system                             #
+# *** Find the system corresponding to the mount point ==> system -> /dev/block/mmcblk0p28 ***  #
+#                                                                                               #
+# root@Flyme :/ cat proc/partitions                                                             #
+# *** Find the block size of system ==> 3989504 mmcblk0p28 ***                                  #
+# *** SystemPartitionSize = 3989504 * 1024 ==> 0xF3800000 ***                                   #
+# *** Fill in the value to the vendor/META/misc_info.txt in your device. ***                    #
+#################################################################################################
+function updateSystemPartitionSize {
+    echo ">> get system partition size ..."
+    SYSTEM_MOUNT_POINT=$(adb shell mount | grep "system" | awk 'BEGIN{FS=" "}{print $1}')
+    if [ "$ROOT_STATE" = "system_root" ];then
+        SYSTEM_SOFT_MOUNT_POINT=$(adb shell su -c ls -l $SYSTEM_MOUNT_POINT | awk -F '/dev' '{print $2}' |awk -F '/' '{print $NF}')
+    else
+        adb root
+        waitForDeviceOnline
+        SYSTEM_SOFT_MOUNT_POINT=$(adb shell ls -l $SYSTEM_MOUNT_POINT | awk -F '/dev' '{print $2}' |awk -F '/' '{print $NF}')
+        if [ "$SYSTEM_SOFT_MOUNT_POINT" == "" ]; then
+            return;
+        fi
+    fi
+    SYSTEM_PARTITION_SIZE=$[$(adb shell cat proc/partitions | grep $SYSTEM_SOFT_MOUNT_POINT | awk 'BEGIN{FS=" "}{print $3}') * 1024]
+    SYSTEM_PARTITION_SIZE16=`echo "obase=16;$SYSTEM_PARTITION_SIZE"|bc`
+    #echo "system partition size is 0x$SYSTEM_PARTITION_SIZE16"
+    if [ "x$SYSTEM_PARTITION_SIZE16" != "x" ]; then
+        sed -i "s#system_size=0x50000000#system_size=0x$SYSTEM_PARTITION_SIZE16#g" $OEM_TARGET_DIR/META/misc_info.txt
+    fi
+    echo "<< get system partition size ..."
+}
+
 
 # get system files info from phone
 function buildSystemInfo {
