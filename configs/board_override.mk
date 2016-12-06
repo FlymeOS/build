@@ -53,7 +53,6 @@ BOARD_MODIFY_RESID_FILES := \
     priv-app/ContactsProvider/ContactsProvider.apk \
     priv-app/DownloadProvider/DownloadProvider.apk \
     priv-app/Settings/Settings.apk \
-    priv-app/Browser/Browser.apk \
     priv-app/Contacts/Contacts.apk \
     priv-app/SystemUI/SystemUI.apk \
     priv-app/SettingsProvider/SettingsProvider.apk \
