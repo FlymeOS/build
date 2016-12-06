@@ -1,6 +1,6 @@
 # This file is auto generate by tools/config/config_prebuilt.py
-# version: from 2167285(Nexus 5) ==> builder.20160919161111_R(Nexus 5)
-# Date: 2016/09/19 17:16
+# version: from 2167285(Nexus 5) ==> builder.20161205162203_R(Nexus 5)
+# Date: 2016/12/05 17:08
 
 BOARD_PREBUILT_DIRS += \
     app/AlarmClock \
@@ -446,6 +446,7 @@ BOARD_PREBUILT += \
 
 BOARD_PRESIGNED_APPS += \
     AliAppAccount.apk \
+    Browser.apk \
     Calculator.apk \
     EBook.apk \
     IflytekSpeechService.apk \

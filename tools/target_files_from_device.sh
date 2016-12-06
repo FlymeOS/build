@@ -1,11 +1,12 @@
 #!/bin/bash 
-#############################################################################################################
-# Option: target, ota;                                                                                      #
-# target: This shell will pull files from phone, build apkcerts.txt and filesystem_config.txt from device,  #
-# create linkinfo.txt from device and recover the device files' symlink information in target_file, then    #
-# generate a target zip file.                                                                               #
-# ota:    This shell will build a ota package from the target file.                                         #
-#############################################################################################################
+################################################################################################################
+# Option:     target, ota;                                                                                     #
+# target:     This shell will pull files from phone, build apkcerts.txt and filesystem_config.txt from device, #
+# create linkinfo.txt from device and recover the device files' symlink information in target_file, then       #
+# generate a target zip file.                                                                                  #
+# ota:        This shell will build a ota package from the target file.                                        #
+# ota_block:  This shell will build a ota package from the target file.                                        #
+################################################################################################################
 
 PRJ_ROOT=`pwd`
 ADB="adb"
@@ -115,7 +116,6 @@ function copyTargetFilesTemplate {
     rm -f $OEM_TARGET_ZIP
     mkdir -p $OEM_TARGET_DIR
     cp -r $TARGET_FILES_TEMPLATE_DIR/* $OEM_TARGET_DIR
-    updateSystemPartitionSize
     echo "<< copy $TARGET_FILES_TEMPLATE_DIR to $OEM_TARGET_DIR ..."
 }
 
@@ -144,17 +144,18 @@ function updateSystemPartitionSize {
     if [ "$ROOT_STATE" = "system_root" ];then
         SYSTEM_SOFT_MOUNT_POINT=$(adb shell su -c ls -l $SYSTEM_MOUNT_POINT | awk -F '/dev' '{print $2}' |awk -F '/' '{print $NF}')
     else
-        adb root
         waitForDeviceOnline
         SYSTEM_SOFT_MOUNT_POINT=$(adb shell ls -l $SYSTEM_MOUNT_POINT | awk -F '/dev' '{print $2}' |awk -F '/' '{print $NF}')
-        if [ "$SYSTEM_SOFT_MOUNT_POINT" == "" ]; then
-            return;
-        fi
     fi
-    SYSTEM_PARTITION_SIZE=$[$(adb shell cat proc/partitions | grep $SYSTEM_SOFT_MOUNT_POINT | awk 'BEGIN{FS=" "}{print $3}') * 1024]
+    SYSTEM_PARTITION_SIZE=$(adb shell cat proc/partitions | grep $SYSTEM_SOFT_MOUNT_POINT | awk 'BEGIN{FS=" "}{print $3}')
+    if [ x"$SYSTEM_PARTITION_SIZE" = x ] || [ -z "$(echo $SYSTEM_PARTITION_SIZE | sed -n "/^[0-9]\+$/p")" ]; then
+        echo "system partition size get error!"
+        return;
+    fi
+    SYSTEM_PARTITION_SIZE=$[$SYSTEM_PARTITION_SIZE * 1024]
     SYSTEM_PARTITION_SIZE16=`echo "obase=16;$SYSTEM_PARTITION_SIZE"|bc`
     #echo "system partition size is 0x$SYSTEM_PARTITION_SIZE16"
-    if [ "x$SYSTEM_PARTITION_SIZE16" != "x" ]; then
+    if [ x"$SYSTEM_PARTITION_SIZE16" != x ]; then
         sed -i "s#system_size=0x50000000#system_size=0x$SYSTEM_PARTITION_SIZE16#g" $OEM_TARGET_DIR/META/misc_info.txt
     fi
     echo "<< get system partition size ..."
@@ -347,6 +348,7 @@ function zipTargetFiles {
 function targetFromPhone {
     checkRootState
     copyTargetFilesTemplate
+    updateSystemPartitionSize
 
     buildSystemInfo
     buildApkcerts
@@ -443,7 +445,11 @@ function buildOtaPackage {
         echo "<< ERROR: Can not find $VENDOR_TARGET_ZIP!!"
         exit $ERR_NOT_VENDOR_TARGET
     fi
-    $OTA_FROM_TARGET_FILES --no_prereq --block -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
+    if [ x"$1" = x"block" ];then
+        $OTA_FROM_TARGET_FILES --no_prereq --block -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
+    else
+        $OTA_FROM_TARGET_FILES --no_prereq -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
+    fi
     if [ ! -f $OUTPUT_OTA_PACKAGE ];then
         echo "<< ERROR: Failed to build $OUTPUT_OTA_PACKAGE!!"
         exit $ERR_MISSION_FAILED
@@ -453,8 +459,9 @@ function buildOtaPackage {
 
 function usage {
     echo "Usage: $0 target/ota"
-    echo "      targe   -- create target files from phone or package"
-    echo "      ota     -- build ota from target"
+    echo "      targe       -- create target files from phone or package"
+    echo "      ota         -- build ota from target"
+    echo "      ota_block   -- build block ota from target"
     exit $ERR_MISSION_FAILED
 }
 
@@ -469,6 +476,8 @@ elif [ "$1" = "target" ];then
     fi
 elif [ "$1" = "ota" ];then
     buildOtaPackage
+elif [ "$1" = "ota_block" ];then
+    buildOtaPackage block
 else
     usage
 fi

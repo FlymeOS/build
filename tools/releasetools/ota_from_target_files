@@ -437,6 +437,13 @@ def HasVendorPartition(target_files_zip):
   except KeyError:
     return False
 
+def HasDataPartition(target_files_zip):
+  try:
+    target_files_zip.getinfo("DATA/")
+    return True
+  except KeyError:
+    return False
+
 def GetOemProperty(name, oem_props, oem_dict, info_dict):
   if oem_props is not None and name in oem_props:
     return oem_dict[name]
@@ -654,7 +661,7 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
 
   # [Coron] Start
   # Add data partition surpport
-  if os.path.isdir("out/merged_target_files/DATA"):
+  if HasDataPartition(input_zip):
     script.UnpackPackageDir("data", "/data")
 
     data_items = ItemSet("data", "META/data_filesystem_config.txt")

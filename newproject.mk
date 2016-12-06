@@ -123,7 +123,7 @@ $(VENDOR_TARGET_ZIP): $(VENDOR_RECOVERY_FSTAB)
 	$(hide) $(RECOVERY_LINK) $(VENDOR_TARGET_DIR)/META/linkinfo.txt $(VENDOR_TARGET_DIR);
 	$(hide) echo "<<< recover the link files for $(VENDOR_TARGET_DIR) done"
 	$(hide) mv $(VENDOR_TARGET_DIR)/system $(VENDOR_TARGET_DIR)/SYSTEM
-	$(hide) rm -rf $(VENDOR_TARGET_DIR)/BOOTABLE_IMAGES/ $(VENDOR_TARGET_DIR)/BOOT
+	$(hide) rm -rf $(VENDOR_TARGET_DIR)/BOOTABLE_IMAGES
 	$(hide) len=$$(grep -v "^#" $(VENDOR_RECOVERY_FSTAB) | egrep "ext|emmc|vfat|yaffs" | awk '{print NF}' | head -1); \
 		isNew=$$(grep -v "^#" $(VENDOR_RECOVERY_FSTAB) | egrep "ext|emmc|vfat|yaffs" | awk '{if ($$2 == "/system"){print "NEW"}}'); \
 		if [ "x$$len" = "x5" ] && [ "x$$isNew" = "xNEW" ]; \
@@ -144,7 +144,11 @@ $(VENDOR_TARGET_ZIP): $(VENDOR_RECOVERY_FSTAB)
 
 $(VENDOR_OTA_ZIP): $(VENDOR_TARGET_ZIP)
 	$(hide) echo "> build vendor ota package ..."
-	$(hide) $(TARGET_FILES_FROM_DEVICE) ota
+	$(hide) if [ x"$(strip $(PRODUCE_BLOCK_BASED_OTA))" = x"false" ];then \
+			$(TARGET_FILES_FROM_DEVICE) ota; \
+		else \
+			$(TARGET_FILES_FROM_DEVICE) ota_block; \
+		fi;
 	$(hide) echo "< build vendor ota package done"
 
 ###################### recovery link ########################
