@@ -440,7 +440,6 @@ BOARD_PREBUILT += \
     media/audio/ui/recorder_prompt_en.ogg \
     media/audio/ui/recorder_prompt_end.ogg \
     media/launcher.xml \
-    media/shutanimation.zip \
     priv-app/DefaultContainerService/lib/arm/libdefcontainer_jni.so
 
 

@@ -13,6 +13,7 @@ BOARD_PREBUILT_DEFAULT := \
     bin/nmbd \
     bin/smbd \
     bin/smbpasswd \
+    bin/shutdownanimation \
     xbin/add-property-tag \
     xbin/check-lost+found \
     xbin/cpustats \
