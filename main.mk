@@ -546,6 +546,9 @@ OTA $(OUT_OTA): $(strip $(call get_all_files_in_dir,$(VENDOR_OTA))) $(strip $(ca
 	$(hide) if [ -d $(BOARD_OTA) ]; then cp -rf $(BOARD_OTA)/* $(OUT_OTA); fi
 	$(hide) if [ -d $(PRJ_OTA_OVERLAY) ]; then cp -rf $(PRJ_OTA_OVERLAY)/* $(OUT_OTA); fi
 	$(hide) if [ -f $(PRJ_UPDATER_SCRIPT_OVERLAY) ]; then cp $(PRJ_UPDATER_SCRIPT_OVERLAY) $(OUT_OTA); fi
+	$(hide) if [ x"$(PRODUCE_BLOCK_BASED_OTA)" = x"false" ]; then \
+			cp -rf $(PORT_BUILD)/compatibility/OTA/updater $(OUT_OTA)/bin; \
+		fi
 	$(hide) echo "<< generate |target-files|OTA| done";
 
 ####################### BOOT ############################
