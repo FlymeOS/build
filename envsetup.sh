@@ -34,8 +34,8 @@ fi
 
 
 # Command "coron" complete
-function __cmd_coron()
-{
+if type complete &>/dev/null; then
+  function __cmd_coron() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     case $COMP_CWORD in
     0)
@@ -47,9 +47,16 @@ function __cmd_coron()
     2)
       ;;
     esac
-}
-
+  }
 complete -F __cmd_coron flyme
+elif type compdef &>/dev/null; then
+  function __cmd_coron() {
+    compls="fire config newproject patchall fullota upgrade porting clean cleanall help"
+    completions=(${=compls})
+    compadd -- $completions
+ }
+compdef __cmd_coron flyme
+fi
 
 function ifdir()
 {
