@@ -8,6 +8,7 @@ BOARD_PREBUILT += $(BOARD_PREBUILT_DEFAULT)
 
 # define the apk and jars which need modify the res id
 BOARD_MODIFY_RESID_FILES := \
+    app/ConnectivitySettings/ConnectivitySettings.apk \
     app/MzBlockService/MzBlockService.apk \
     app/MzSimContacts/MzSimContacts.apk \
     priv-app/Contacts/Contacts.apk \
