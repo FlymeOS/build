@@ -9,6 +9,7 @@ ERR_NOT_PREPARE_BOOT_IMG=212
 
 UNPACK_BOOT_PY := $(PORT_ROOT)/tools/bootimgpack/unpack_bootimg.py
 PACK_BOOT_PY := $(PORT_ROOT)/tools/bootimgpack/pack_bootimg.py
+SEPOLICY_INJECT := $(PORT_ROOT)/build/tools/custom_sepolicy.sh
 BOARD_SERVICE_PART := $(PORT_ROOT)/tools/bootimgpack/init.rc.part
 
 ######################## boot #############################
@@ -49,6 +50,7 @@ ifeq ($(strip $(filter boot boot.img, $(vendor_modify_images))),)
 ifeq ($(PRJ_BOOT_IMG), $(wildcard $(PRJ_BOOT_IMG)))
 bootimage: $(OUT_BOOT_IMG)
 	$(hide) echo "* use prebuilt $(BOOT_IMG)"
+	$(hide) echo "* You should update the sepolicy by running the command \"sepolicy_inject\", and then update the boot.img"
 	$(hide) echo " "
 
 $(OUT_BOOT_IMG):
@@ -72,6 +74,9 @@ prepare_boot_ramdisk:
 	$(hide) rm -rf $(OUT_OBJ_BOOT);
 	$(hide) mkdir -p $(OUT_OBJ_BOOT);
 	$(hide) cp -r $(PRJ_BOOT_DIR)/* $(OUT_OBJ_BOOT);
+ifneq ($(strip $(PRODUCE_SEPOLICY_INJECT)),false)
+	$(hide) $(SEPOLICY_INJECT) $(OUT_OBJ_BOOT)/RAMDISK/sepolicy
+endif
 	$(hide) $(foreach prebuilt_pair,$(BOOT_PREBUILT_FILES),\
 			$(eval src_file := $(call word-colon,1,$(prebuilt_pair)))\
 			$(eval dst_file := $(call word-colon,2,$(prebuilt_pair)))\
