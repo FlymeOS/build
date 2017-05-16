@@ -10,7 +10,7 @@ TARGET_FILES_FROM_DEVICE:= $(PORT_BUILD_TOOLS)/target_files_from_device.sh
 ##################### newproject ########################
 ./PHONY: newproject
 
-newproject: prepare-vendor prepare-vendor-boot prepare-vendor-recovery decodefile recovery_link
+newproject: prepare-vendor prepare-vendor-boot prepare-vendor-recovery decodefile recovery_link update_file_system_config
 	$(hide) if [ -f $(OUT_DIR)/build-info-to-user.txt ];then \
 			cat $(OUT_DIR)/build-info-to-user.txt; \
 		fi
@@ -157,3 +157,29 @@ recovery_link: $(VENDOR_DIR)
 	$(hide) echo "> recovery vendor linkinfo ..."
 	$(hide) $(RECOVERY_LINK) $(VENDOR_DIR)/META/linkinfo.txt $(VENDOR_DIR);
 	$(hide) echo "< recovery vendor linkinfo done"
+
+###################### update file_system ########################
+.PHONY: update_file_system_config
+update_file_system_config: $(VENDOR_DIR)
+	$(hide) echo "> update file system config info ..."
+	$(hide) if [ ! -d $(OUT_DIR) ]; then mkdir -p $(OUT_DIR); fi
+	$(hide) if [ ! -f $(OUT_DIR)/file_contexts ]; then \
+			if [ -f $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts ]; then \
+				cp $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts $(OUT_DIR)/file_contexts; \
+			else \
+				echo "get file_contexts from phone ..."; \
+				adb pull /file_contexts $(OUT_DIR)/file_contexts \
+				echo -n ""; \
+			fi; \
+		fi;
+	$(hide) if [ -f $(OUT_DIR)/file_contexts ]; then \
+			cd $(VENDOR_DIR); zip -qry $(PRJ_ROOT)/$(OUT_DIR)/vendor_system.zip system; cd - > /dev/null; \
+			zipinfo -1 $(OUT_DIR)/vendor_system.zip \
+				| $(PORT_ROOT)/build/tools/bin/fs_config -C -D $(VENDOR_SYSTEM) -S $(OUT_DIR)/file_contexts \
+				| sort > $(VENDOR_META)/filesystem_config.txt; \
+		else \
+			echo "ERROR: Please ensure adb can find your device or can adb pull file_contexts and then rerun this script!!"; \
+			echo "Maby you can get the file_contexts from phone or ota.zip and copy to devices/$(PRJ_NAME)/$(OUT_DIR)"; \
+			echo ""; \
+		fi;
+	$(hide) echo "< update file system config info done"
