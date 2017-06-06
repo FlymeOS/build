@@ -49,5 +49,13 @@ function custom_arm64
 	fi
 }
 
+function custom_flymeRes()
+{
+	if [ -f $BOARD_ZIP_DIR/system/framework/flyme-res/flyme-res.jar ]; then
+		mv $BOARD_ZIP_DIR/system/framework/flyme-res/flyme-res.jar $BOARD_ZIP_DIR/system/framework/flyme-res/flyme-res.apk
+	fi
+}
+
 custom_theme
 custom_arm64
+custom_flymeRes
