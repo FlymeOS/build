@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APKTOOL_IF_FRAMEWORK_DIR=~/apktool/framework
+APKTOOL_IF_FRAMEWORK_DIR=~/.local/share/apktool/framework
 
 function isFrameworkApk()
 {

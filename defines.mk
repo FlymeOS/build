@@ -17,7 +17,7 @@ endef
 # which are board's framework resource apk
 # such as framework-res.apk, framework-res-yi.apk of baidu or flyme-res.zpk of meizu
 define apktool_if_board
-rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_BOARD_TAG).apk;\
+rm -rf $(APKTOOL_FRAME_PATH)/[0-9]*-$(APKTOOL_BOARD_TAG).apk;\
 $(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_BOARD_TAG)
 endef
 
@@ -29,16 +29,16 @@ endef
 # apktool install framework resouce apks in vendor/system/framework
 # which are vendor's framework resource apk
 define apktool_if_vendor
-rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_VENDOR_TAG).apk;\
+rm -rf $(APKTOOL_FRAME_PATH)/[0-9]*-$(APKTOOL_VENDOR_TAG).apk;\
 $(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_VENDOR_TAG)
 endef
 
 # apktool install framework resouce apks in out/merged_target_files/SYSTEM/framework
 # thoese framework resouce apks which were merged from board to vendor
 define apktool_if_merged
-rm -rf ~/apktool/framework/[0-9]*-$(APKTOOL_MERGED_TAG).apk;\
+rm -rf $(APKTOOL_FRAME_PATH)/[0-9]*-$(APKTOOL_MERGED_TAG).apk;\
 $(INSTALL_FRAMEWORKS) $(1) $(APKTOOL_MERGED_TAG); \
-cp ~/apktool/framework/1-$(APKTOOL_MERGED_TAG).apk $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/1-$(APKTOOL_BOARD_TAG).apk
+cp $(APKTOOL_FRAME_PATH)/1-$(APKTOOL_MERGED_TAG).apk $(APKTOOL_FRAME_PATH_BOARD_MODIFY)/1-$(APKTOOL_BOARD_TAG).apk
 endef
 
 
@@ -69,17 +69,17 @@ endef
 
 # used for aapt to merged resouce
 define get_board_installed_framework_params
-`ls ~/apktool/framework/[0-9]*-$(APKTOOL_BOARD_TAG).apk | sed 's/^/-I /g'`
+`ls $(APKTOOL_FRAME_PATH)/[0-9]*-$(APKTOOL_BOARD_TAG).apk | sed 's/^/-I /g'`
 endef
 
 # used for aapt to merged resouce
 define get_vendor_installed_framework_params
-`ls ~/apktool/framework/[0-9]*-$(APKTOOL_VENDOR_TAG).apk | sed 's/^/-I /g'`
+`ls $(APKTOOL_FRAME_PATH)/[0-9]*-$(APKTOOL_VENDOR_TAG).apk | sed 's/^/-I /g'`
 endef
 
 # used for aapt to merged resouce
 define get_merged_installed_framework_params
-`ls ~/apktool/framework/[0-9]*-$(APKTOOL_MERGED_TAG).apk | sed 's/^/-I /g'`
+`ls $(APKTOOL_FRAME_PATH)/[0-9]*-$(APKTOOL_MERGED_TAG).apk | sed 's/^/-I /g'`
 endef
 
 # update the apktool.yml, include tags and usesFramework
@@ -390,9 +390,9 @@ define get_resource_id
 $(shell grep -o "0x[0-9a-f]*" $(1)/res/values/public.xml | head -1 | cut -b4;)
 endef
 
-# get the apk in ~/apktool/framework/ which the install framework resouce apks stored
+# get the apk in $(APKTOOL_FRAME_PATH) which the install framework resouce apks stored
 define get_include_aapt_res
-`ls ~/apktool/framework/[0-$(1)]*-$(APKTOOL_VENDOR_TAG).apk | sed 's/^/-I /g'`
+`ls $(APKTOOL_FRAME_PATH)/[0-$(1)]*-$(APKTOOL_VENDOR_TAG).apk | sed 's/^/-I /g'`
 endef
 
 # used to build the apks in framework, and doesn't have smali directory

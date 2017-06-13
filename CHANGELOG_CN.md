@@ -1,6 +1,11 @@
 [English](./CHANGELOG.md) | 简体中文
 
 
+#### Flyme 6.7.6.9 (2017-06-13)
+
+- 【修复】更新 `apktool` 到版本 `v2.2.2` 后安装资源文件的位置发生错误的问题。
+
+
 #### Flyme 6.7.6.5 (2017-06-06)
 
 - 【修复】`Android Marshmallow` 引入 `Whitelist` 机制后不能打开 `flyme-res.apk` 对应的 `zygote` 的问题。
