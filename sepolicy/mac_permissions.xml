@@ -31,4 +31,15 @@
       <seinfo value="default" />
     </default>
 
+    <signer signature="@MEDIA" >
+        <seinfo value="media" />
+    </signer>
+
+    <signer signature="@SHARED" >
+        <seinfo value="shared" />
+    </signer>
+
+    <signer signature="@RELEASE" >
+        <seinfo value="release" />
+    </signer>
 </policy>
