@@ -260,7 +260,14 @@ class EdifyGenerator(object):
     """Delete all files in file_list."""
     if not file_list:
       return
-    cmd = "delete_recursive(" + ",\0".join(['"%s"' % (i,) for i in file_list]) + ");"
+    cmd = "delete(" + ",\0".join(['"%s"' % (i,) for i in file_list]) + ");"
+    self.script.append(self.WordWrap(cmd))
+
+  def DeleteDirs(self, dir_list):
+    """Delete all dirs in dir_list."""
+    if not dir_list:
+      return
+    cmd = "delete_recursive(" + ",\0".join(['"%s"' % (i,) for i in dir_list]) + ");"
     self.script.append(self.WordWrap(cmd))
 
   def DeleteFilesIfNotMatching(self, file_list):

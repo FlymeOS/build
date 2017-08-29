@@ -21,6 +21,7 @@ BOARD_PREBUILT += \
     lib/libDominantColors.so \
     lib/libeffects_filters.so \
     lib/libeffects_mosaic.so \
+    lib/libeglbitmap.so \
     lib/libexif_gallery.so \
     lib/libfilterUtils.so \
     lib/libimage_codec.so \
@@ -39,6 +40,7 @@ BOARD_PREBUILT += \
     lib/librender_engine.so \
     lib/libRSSupport.so \
     lib/libskia_hw_interface.so \
+    lib/libsurfacetexture_bitmap.so \
     lib/libtaglib.so \
     lib/libvlife_media.so \
     lib/libvlife_openglutil.so \

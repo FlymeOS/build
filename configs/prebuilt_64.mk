@@ -5,6 +5,7 @@ BOARD_PREBUILT += \
     lib64/libDominantColors.so \
     lib64/libeffects_filters.so \
     lib64/libeffects_mosaic.so \
+    lib64/libeglbitmap.so \
     lib64/libexif_gallery.so \
     lib64/libfilterUtils.so \
     lib64/libimage_codec.so \
@@ -24,7 +25,7 @@ BOARD_PREBUILT += \
     lib64/libtaglib.so \
     lib64/libvlife_media.so \
     lib64/libvlife_openglutil.so \
-    lib64/libvlife_render.so \
+    lib64/libvlife_render.so
 
 ifeq ($(strip $(PRODUCE_INTERNATIONAL_ROM)),true)
 BOARD_PREBUILT += \

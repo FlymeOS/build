@@ -1032,6 +1032,7 @@ class FileDifference(object):
     self.renames = renames = {}
     known_paths = set()
     largest_source_size = 0
+    self.remove_dir_list = []
 
     matching_file_cache = {}
     for fn, sf in source_data.items():
@@ -1108,11 +1109,31 @@ class FileDifference(object):
       script.FileCheck(tf.name, tf.sha1)
 
   def RemoveUnneededFiles(self, script, extras=()):
-    script.DeleteFiles(
-        ["/" + i[0] for i in self.verbatim_targets] +
-        ["/" + i for i in sorted(self.source_data)
-         if i not in self.target_data and i not in self.renames] +
-        list(extras))
+    file_list = []
+    dir_list = []
+    for i in self.verbatim_targets:
+      if not i[0].endswith("/"):
+        file_list += ["/" + i[0]]
+      else:
+        dir_list += ["/" + i[0]]
+    for i in self.source_data:
+      if i not in self.target_data:
+        if not i.endswith("/"):
+          if i not in self.renames:
+            file_list += ["/" + i]
+        else:
+          dir_list += ["/" + i]
+          for src, tgt in self.renames.iteritems():
+            if i in src:
+              dir_list.remove("/" + i)
+              self.remove_dir_list += ["/" + i]
+    for i in list(extras):
+      if not i.endswith("/"):
+        file_list += [i]
+      else:
+        dir_list += [i]
+    script.DeleteFiles(sorted(file_list))
+    script.DeleteDirs(sorted(dir_list))
 
   def TotalPatchSize(self):
     return sum(i[1].size for i in self.patch_list)
@@ -1145,6 +1166,7 @@ class FileDifference(object):
       for src, tgt in self.renames.iteritems():
         print "Renaming " + src + " to " + tgt.name
         script.RenameFile(src, tgt.name)
+      script.DeleteDirs(sorted(self.remove_dir_list))
 
 
 def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
