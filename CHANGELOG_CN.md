@@ -1,5 +1,10 @@
 [English](./CHANGELOG.md) | 简体中文
 
+#### Flyme 6.7.9.8 (2017-09-13)
+
+- 【优化】编译生成的 `target` 包的文件名增加版本号的标识。
+
+
 #### Flyme 6.7.8.25 (2017-08-30)
 
 - 【修复】修复完整包需要删除或者移动某些文件的情况下生成的 `ota` 差分包有异常的问题（The issue of Android Open Source Project）。

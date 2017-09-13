@@ -148,7 +148,7 @@ PRJ_FULL_OTA_ZIP := $(OTA_ZIP)
 endif
 
 ifeq ($(TARGET_ZIP),)
-PRJ_TARGET_ZIP := $(OUT_DIR)/target_files_$(TARGET_MODEL)_$(BUILD_DATE).zip
+PRJ_TARGET_ZIP := $(OUT_DIR)/target_files_$(TARGET_MODEL)_$(DISPLAY_VERSION)_$(BUILD_DATE).zip
 else
 PRJ_TARGET_ZIP := $(TARGET_ZIP)
 endif
