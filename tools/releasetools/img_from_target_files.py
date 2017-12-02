@@ -86,6 +86,8 @@ def main(argv):
             continue
           if not image.endswith(".img"):
             continue
+          if image == "recovery-two-step.img":
+            continue
           common.ZipWrite(
               output_zip, os.path.join(images_path, image), image)
         done = True
@@ -95,25 +97,18 @@ def main(argv):
       # images, so build them.
       import add_img_to_target_files
 
-      OPTIONS.info_dict = common.LoadInfoDict(input_zip)
-
-      # If this image was originally labelled with SELinux contexts,
-      # make sure we also apply the labels in our new image. During
-      # building, the "file_contexts" is in the out/ directory tree,
-      # but for repacking from target-files.zip it's in the root
-      # directory of the ramdisk.
-      if "selinux_fc" in OPTIONS.info_dict:
-        OPTIONS.info_dict["selinux_fc"] = os.path.join(
-            OPTIONS.input_tmp, "BOOT", "RAMDISK", "file_contexts")
+      OPTIONS.info_dict = common.LoadInfoDict(input_zip, OPTIONS.input_tmp)
 
       boot_image = common.GetBootableImage(
           "boot.img", "boot.img", OPTIONS.input_tmp, "BOOT")
       if boot_image:
         boot_image.AddToZip(output_zip)
-      recovery_image = common.GetBootableImage(
-          "recovery.img", "recovery.img", OPTIONS.input_tmp, "RECOVERY")
-      if recovery_image:
-        recovery_image.AddToZip(output_zip)
+
+      if OPTIONS.info_dict.get("no_recovery") != "true":
+        recovery_image = common.GetBootableImage(
+            "recovery.img", "recovery.img", OPTIONS.input_tmp, "RECOVERY")
+        if recovery_image:
+          recovery_image.AddToZip(output_zip)
 
       def banner(s):
         print "\n\n++++ " + s + " ++++\n\n"

@@ -42,10 +42,9 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       radio image. This option is only meaningful when -i is specified,
       because a full radio is always included in a full OTA if applicable.
 
- --full_bootloader
-      When generating an incremental OTA, always include a full copy of
-      bootloader image. This option is only meaningful when -i is specified,
-      because a full bootloader is always included in a full OTA if applicable.
+  --full_bootloader
+      Similar to --full_radio. When generating an incremental OTA, always
+      include a full copy of bootloader image.
 
   -v  (--verify)
       Remount and verify the checksums of the files written to the
@@ -55,6 +54,12 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       Use the file to specify the expected OEM-specific properties
       on the OEM partition of the intended device.
 
+  --oem_no_mount
+      For devices with OEM-specific properties but without an OEM partition,
+      do not mount the OEM partition in the updater-script. This should be
+      very rarely used, since it's expected to have a dedicated OEM partition
+      for OEM-specific properties. Only meaningful when -o is specified.
+
   -w  (--wipe_user_data)
       Generate an OTA package that will wipe the user data partition
       when installed.
@@ -63,6 +68,14 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       Omit the timestamp prereq check normally included at the top of
       the build scripts (used for developer OTA packages which
       legitimately need to go back and forth).
+
+  --downgrade
+      Intentionally generate an incremental OTA that updates from a newer
+      build to an older one (based on timestamp comparison). "post-timestamp"
+      will be replaced by "ota-downgrade=yes" in the metadata file. A data
+      wipe will always be enforced, so "ota-wipe=yes" will also be included in
+      the metadata file. The update-binary in the source build will be used in
+      the OTA package, unless --binary flag is specified.
 
   -e  (--extra_script)  <file>
       Insert the contents of file at the end of the update script.
@@ -92,6 +105,25 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
   --stash_threshold <float>
       Specifies the threshold that will be used to compute the maximum
       allowed stash size (defaults to 0.8).
+
+  --gen_verify
+      Generate an OTA package that verifies the partitions.
+
+  --log_diff <file>
+      Generate a log file that shows the differences in the source and target
+      builds for an incremental package. This option is only meaningful when
+      -i is specified.
+
+  --payload_signer <signer>
+      Specify the signer when signing the payload and metadata for A/B OTAs.
+      By default (i.e. without this flag), it calls 'openssl pkeyutl' to sign
+      with the package private key. If the private key cannot be accessed
+      directly, a payload signer that knows how to do that should be specified.
+      The signer will be supplied with "-inkey <path_to_key>",
+      "-in <input_file>" and "-out <output_file>" parameters.
+
+  --payload_signer_args <args>
+      Specify the arguments needed for payload signer.
 """
 
 import sys
@@ -102,6 +134,8 @@ if sys.hexversion < 0x02070000:
 
 import multiprocessing
 import os
+import subprocess
+import shlex
 import tempfile
 import zipfile
 
@@ -118,6 +152,7 @@ OPTIONS.prohibit_verbatim = set(("system/build.prop",))
 OPTIONS.patch_threshold = 0.95
 OPTIONS.wipe_user_data = False
 OPTIONS.omit_prereq = False
+OPTIONS.downgrade = False
 OPTIONS.extra_script = None
 OPTIONS.aslr_mode = True
 OPTIONS.worker_threads = multiprocessing.cpu_count() // 2
@@ -128,13 +163,17 @@ OPTIONS.no_signing = False
 OPTIONS.block_based = False
 OPTIONS.updater_binary = None
 OPTIONS.oem_source = None
+OPTIONS.oem_no_mount = False
 OPTIONS.fallback_to_full = True
 OPTIONS.full_radio = False
 OPTIONS.full_bootloader = False
 # Stash size cannot exceed cache_size * threshold.
 OPTIONS.cache_size = None
 OPTIONS.stash_threshold = 0.8
-OPTIONS.verify_fingerprint = False
+OPTIONS.gen_verify = False
+OPTIONS.log_diff = None
+OPTIONS.payload_signer = None
+OPTIONS.payload_signer_args = []
 
 def MostPopularKey(d, default):
   """Given a dict, return the key corresponding to the largest
@@ -149,12 +188,12 @@ def MostPopularKey(d, default):
 def IsSymlink(info):
   """Return true if the zipfile.ZipInfo object passed in represents a
   symlink."""
-  return (info.external_attr >> 16) == 0o120777
+  return (info.external_attr >> 16) & 0o770000 == 0o120000
 
 def IsRegular(info):
   """Return true if the zipfile.ZipInfo object passed in represents a
-  symlink."""
-  return (info.external_attr >> 28) == 0o10
+  regular file."""
+  return (info.external_attr >> 16) & 0o770000 == 0o100000
 
 def ClosestFileMatch(src, tgtfiles, existing):
   """Returns the closest file match between a source file and list
@@ -224,7 +263,8 @@ class ItemSet(object):
         if i.is_dir:
           i.children.sort(key=lambda i: i.name)
 
-    # set metadata for the files generated by this script.
+    # Set metadata for the files generated by this script. For full recovery
+    # image at system/etc/recovery.img, it will be taken care by fs_config.
     i = self.ITEMS.get("system/recovery-from-boot.p", None)
     if i:
       i.uid, i.gid, i.mode, i.selabel, i.capabilities = 0, 0, 0o644, None, None
@@ -340,7 +380,7 @@ class Item(object):
       # We only need to issue set_perm/set_perm_recursive commands if we're
       # supposed to be something different.
       if item.is_dir:
-        if current != item.best_subtree and item.name != "data" and item.name != "data/media":
+        if current != item.best_subtree:
           script.SetPermissionsRecursive("/"+item.name, *item.best_subtree)
           current = item.best_subtree
 
@@ -412,13 +452,10 @@ def SignOutput(temp_zip_name, output_zip_name):
 
 
 def AppendAssertions(script, info_dict, oem_dict=None):
-  if not UseAssertions(info_dict):
-    return
-
   oem_props = info_dict.get("oem_fingerprint_properties")
   if oem_props is None or len(oem_props) == 0:
     device = GetBuildProp("ro.product.device", info_dict)
-    script.AssertDeviceCoron(device)
+    script.AssertDevice(device)
   else:
     if oem_dict is None:
       raise common.ExternalError(
@@ -429,31 +466,48 @@ def AppendAssertions(script, info_dict, oem_dict=None):
             "The OEM file is missing the property %s" % prop)
       script.AssertOemProperty(prop, oem_dict.get(prop))
 
-def UseAssertions(info_dict):
-  if "use_assertions" in info_dict.keys():
-    if cmp("false", info_dict["use_assertions"]) == 0:
-      print ">>> Not append assertions as escape_assertions=true"
-      return False
 
-  return True
+def _WriteRecoveryImageToBoot(script, output_zip):
+  """Find and write recovery image to /boot in two-step OTA.
+
+  In two-step OTAs, we write recovery image to /boot as the first step so that
+  we can reboot to there and install a new recovery image to /recovery.
+  A special "recovery-two-step.img" will be preferred, which encodes the correct
+  path of "/boot". Otherwise the device may show "device is corrupt" message
+  when booting into /boot.
+
+  Fall back to using the regular recovery.img if the two-step recovery image
+  doesn't exist. Note that rebuilding the special image at this point may be
+  infeasible, because we don't have the desired boot signer and keys when
+  calling ota_from_target_files.py.
+  """
+
+  recovery_two_step_img_name = "recovery-two-step.img"
+  recovery_two_step_img_path = os.path.join(
+      OPTIONS.input_tmp, "IMAGES", recovery_two_step_img_name)
+  if os.path.exists(recovery_two_step_img_path):
+    recovery_two_step_img = common.GetBootableImage(
+        recovery_two_step_img_name, recovery_two_step_img_name,
+        OPTIONS.input_tmp, "RECOVERY")
+    common.ZipWriteStr(
+        output_zip, recovery_two_step_img_name, recovery_two_step_img.data)
+    print "two-step package: using %s in stage 1/3" % (
+        recovery_two_step_img_name,)
+    script.WriteRawImage("/boot", recovery_two_step_img_name)
+  else:
+    print "two-step package: using recovery.img in stage 1/3"
+    # The "recovery.img" entry has been written into package earlier.
+    script.WriteRawImage("/boot", "recovery.img")
+
 
 def HasRecoveryPatch(target_files_zip):
-  try:
-    target_files_zip.getinfo("SYSTEM/recovery-from-boot.p")
-    return True
-  except KeyError:
-    return False
+  namelist = [name for name in target_files_zip.namelist()]
+  return ("SYSTEM/recovery-from-boot.p" in namelist or
+          "SYSTEM/etc/recovery.img" in namelist)
 
 def HasVendorPartition(target_files_zip):
   try:
     target_files_zip.getinfo("VENDOR/")
-    return True
-  except KeyError:
-    return False
-
-def HasDataPartition(target_files_zip):
-  try:
-    target_files_zip.getinfo("DATA/")
     return True
   except KeyError:
     return False
@@ -527,7 +581,8 @@ def WriteFullOTAPackage(input_zip, output_zip):
   if oem_props is not None and len(oem_props) > 0:
     if OPTIONS.oem_source is None:
       raise common.ExternalError("OEM source required for this build")
-    script.Mount("/oem", recovery_mount_options)
+    if not OPTIONS.oem_no_mount:
+      script.Mount("/oem", recovery_mount_options)
     oem_dict = common.LoadDictionaryFromLines(
         open(OPTIONS.oem_source).readlines())
 
@@ -549,7 +604,9 @@ def WriteFullOTAPackage(input_zip, output_zip):
       info_dict=OPTIONS.info_dict)
 
   has_recovery_patch = HasRecoveryPatch(input_zip)
-  block_based = OPTIONS.block_based
+  block_based = OPTIONS.block_based and has_recovery_patch
+
+  metadata["ota-type"] = "BLOCK" if block_based else "FILE"
 
   if not OPTIONS.omit_prereq:
     ts = GetBuildProp("ro.build.date.utc", OPTIONS.info_dict)
@@ -592,12 +649,18 @@ def WriteFullOTAPackage(input_zip, output_zip):
     script.AppendExtra("""
 if get_stage("%(bcb_dev)s") == "2/3" then
 """ % bcb_dev)
+
+    # Stage 2/3: Write recovery image to /recovery (currently running /boot).
+    script.Comment("Stage 2/3")
     script.WriteRawImage("/recovery", "recovery.img")
     script.AppendExtra("""
 set_stage("%(bcb_dev)s", "3/3");
 reboot_now("%(bcb_dev)s", "recovery");
 else if get_stage("%(bcb_dev)s") == "3/3" then
 """ % bcb_dev)
+
+    # Stage 3/3: Make changes.
+    script.Comment("Stage 3/3")
 
   # Dump fingerprints
   script.Print("Target: %s" % CalculateFingerprint(
@@ -612,6 +675,8 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   if HasVendorPartition(input_zip):
     system_progress -= 0.1
 
+  # Place a copy of file_contexts.bin into the OTA package which will be used
+  # by the recovery program.
   if "selinux_fc" in OPTIONS.info_dict:
     WritePolicyConfig(OPTIONS.info_dict["selinux_fc"], output_zip)
 
@@ -639,16 +704,16 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
     symlinks = CopyPartitionFiles(system_items, input_zip, output_zip)
     script.MakeSymlinks(symlinks)
 
-  boot_img = common.GetBootableImage("boot.img", "boot.img",
-                                     OPTIONS.input_tmp, "BOOT")
+  boot_img = common.GetBootableImage(
+      "boot.img", "boot.img", OPTIONS.input_tmp, "BOOT")
 
   if not block_based:
     def output_sink(fn, data):
       common.ZipWriteStr(output_zip, "recovery/" + fn, data)
       system_items.Get("system/" + fn)
 
-    #common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
-    #                         recovery_img, boot_img)
+    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
+                             recovery_img, boot_img)
 
     system_items.GetMetadata(input_zip)
     system_items.Get("system").SetPermissions(script)
@@ -673,25 +738,14 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
       vendor_items.GetMetadata(input_zip)
       vendor_items.Get("vendor").SetPermissions(script)
 
-  #common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
-
-  if boot_img:
-    common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
+  common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
+  common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
 
   script.ShowProgress(0.05, 5)
   script.WriteRawImage("/boot", "boot.img")
 
   script.ShowProgress(0.2, 10)
   device_specific.FullOTA_InstallEnd()
-  if HasDataPartition(input_zip):
-    script.UnpackPackageDir("data", "/data")
-
-    data_items = ItemSet("data", "META/data_filesystem_config.txt")
-    data_symlinks = CopyPartitionFiles(data_items, input_zip, output_zip)
-    script.MakeSymlinks(data_symlinks)
-
-    data_items.GetMetadata(input_zip)
-    data_items.Get("data").SetPermissions(script)
 
   if OPTIONS.extra_script is not None:
     script.AppendExtra(OPTIONS.extra_script)
@@ -707,19 +761,23 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
 set_stage("%(bcb_dev)s", "");
 """ % bcb_dev)
     script.AppendExtra("else\n")
-    script.WriteRawImage("/boot", "recovery.img")
+
+    # Stage 1/3: Nothing to verify for full OTA. Write recovery image to /boot.
+    script.Comment("Stage 1/3")
+    _WriteRecoveryImageToBoot(script, output_zip)
+
     script.AppendExtra("""
 set_stage("%(bcb_dev)s", "2/3");
 reboot_now("%(bcb_dev)s", "");
 endif;
 endif;
 """ % bcb_dev)
+
+  script.SetProgress(1)
   script.AddToZip(input_zip, output_zip, input_path=OPTIONS.updater_binary)
+  metadata["ota-required-cache"] = str(script.required_cache)
   WriteMetadata(metadata, output_zip)
 
-  if block_based:
-    common.ZipWriteStr(output_zip, "system/build.prop",
-                       ""+input_zip.read("SYSTEM/build.prop"))
 
 def WritePolicyConfig(file_name, output_zip):
   common.ZipWrite(output_zip, file_name, os.path.basename(file_name))
@@ -766,6 +824,8 @@ def AddToKnownPaths(filename, known_paths):
 
 
 def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
+  # TODO(tbao): We should factor out the common parts between
+  # WriteBlockIncrementalOTAPackage() and WriteIncrementalOTAPackage().
   source_version = OPTIONS.source_info_dict["recovery_api_version"]
   target_version = OPTIONS.target_info_dict["recovery_api_version"]
 
@@ -776,12 +836,44 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
       source_version, OPTIONS.target_info_dict,
       fstab=OPTIONS.source_info_dict["fstab"])
 
+  oem_props = OPTIONS.info_dict.get("oem_fingerprint_properties")
+  recovery_mount_options = OPTIONS.source_info_dict.get(
+      "recovery_mount_options")
+  oem_dict = None
+  if oem_props is not None and len(oem_props) > 0:
+    if OPTIONS.oem_source is None:
+      raise common.ExternalError("OEM source required for this build")
+    if not OPTIONS.oem_no_mount:
+      script.Mount("/oem", recovery_mount_options)
+    oem_dict = common.LoadDictionaryFromLines(
+        open(OPTIONS.oem_source).readlines())
+
   metadata = {
-      "pre-device": GetBuildProp("ro.product.device",
-                                 OPTIONS.source_info_dict),
-      "post-timestamp": GetBuildProp("ro.build.date.utc",
-                                     OPTIONS.target_info_dict),
+      "pre-device": GetOemProperty("ro.product.device", oem_props, oem_dict,
+                                   OPTIONS.source_info_dict),
+      "ota-type": "BLOCK",
   }
+
+  post_timestamp = GetBuildProp("ro.build.date.utc", OPTIONS.target_info_dict)
+  pre_timestamp = GetBuildProp("ro.build.date.utc", OPTIONS.source_info_dict)
+  is_downgrade = long(post_timestamp) < long(pre_timestamp)
+
+  if OPTIONS.downgrade:
+    metadata["ota-downgrade"] = "yes"
+    if not is_downgrade:
+      raise RuntimeError("--downgrade specified but no downgrade detected: "
+                         "pre: %s, post: %s" % (pre_timestamp, post_timestamp))
+  else:
+    if is_downgrade:
+      # Non-fatal here to allow generating such a package which may require
+      # manual work to adjust the post-timestamp. A legit use case is that we
+      # cut a new build C (after having A and B), but want to enfore the
+      # update path of A -> C -> B. Specifying --downgrade may not help since
+      # that would enforce a data wipe for C -> B update.
+      print("\nWARNING: downgrade detected: pre: %s, post: %s.\n"
+            "The package may not be deployed properly. "
+            "Try --downgrade?\n" % (pre_timestamp, post_timestamp))
+    metadata["post-timestamp"] = post_timestamp
 
   device_specific = common.DeviceSpecificParams(
       source_zip=source_zip,
@@ -793,16 +885,16 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
       metadata=metadata,
       info_dict=OPTIONS.source_info_dict)
 
-  # TODO: Currently this works differently from WriteIncrementalOTAPackage().
-  # This function doesn't consider thumbprints when writing
-  # metadata["pre/post-build"]. One possible reason is that the current
-  # devices with thumbprints are all using file-based OTAs. Long term we
-  # should factor out the common parts into a shared one to avoid further
-  # divergence.
-  source_fp = GetBuildProp("ro.build.fingerprint", OPTIONS.source_info_dict)
-  target_fp = GetBuildProp("ro.build.fingerprint", OPTIONS.target_info_dict)
+  source_fp = CalculateFingerprint(oem_props, oem_dict,
+                                   OPTIONS.source_info_dict)
+  target_fp = CalculateFingerprint(oem_props, oem_dict,
+                                   OPTIONS.target_info_dict)
   metadata["pre-build"] = source_fp
   metadata["post-build"] = target_fp
+  metadata["pre-build-incremental"] = GetBuildProp(
+      "ro.build.version.incremental", OPTIONS.source_info_dict)
+  metadata["post-build-incremental"] = GetBuildProp(
+      "ro.build.version.incremental", OPTIONS.target_info_dict)
 
   source_boot = common.GetBootableImage(
       "/tmp/boot.img", "boot.img", OPTIONS.source_tmp, "BOOT",
@@ -824,8 +916,21 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
         int(i) for i in
         OPTIONS.info_dict.get("blockimgdiff_versions", "1").split(","))
 
+  # Check the first block of the source system partition for remount R/W only
+  # if the filesystem is ext4.
+  system_src_partition = OPTIONS.source_info_dict["fstab"]["/system"]
+  check_first_block = system_src_partition.fs_type == "ext4"
+  # Disable using imgdiff for squashfs. 'imgdiff -z' expects input files to be
+  # in zip formats. However with squashfs, a) all files are compressed in LZ4;
+  # b) the blocks listed in block map may not contain all the bytes for a given
+  # file (because they're rounded to be 4K-aligned).
+  system_tgt_partition = OPTIONS.target_info_dict["fstab"]["/system"]
+  disable_imgdiff = (system_src_partition.fs_type == "squashfs" or
+                     system_tgt_partition.fs_type == "squashfs")
   system_diff = common.BlockDifference("system", system_tgt, system_src,
-                                       version=blockimgdiff_version)
+                                       check_first_block,
+                                       version=blockimgdiff_version,
+                                       disable_imgdiff=disable_imgdiff)
 
   if HasVendorPartition(target_zip):
     if not HasVendorPartition(source_zip):
@@ -834,21 +939,18 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
                           OPTIONS.source_info_dict)
     vendor_tgt = GetImage("vendor", OPTIONS.target_tmp,
                           OPTIONS.target_info_dict)
+
+    # Check first block of vendor partition for remount R/W only if
+    # disk type is ext4
+    vendor_partition = OPTIONS.source_info_dict["fstab"]["/vendor"]
+    check_first_block = vendor_partition.fs_type == "ext4"
+    disable_imgdiff = vendor_partition.fs_type == "squashfs"
     vendor_diff = common.BlockDifference("vendor", vendor_tgt, vendor_src,
-                                         version=blockimgdiff_version)
+                                         check_first_block,
+                                         version=blockimgdiff_version,
+                                         disable_imgdiff=disable_imgdiff)
   else:
     vendor_diff = None
-
-  oem_props = OPTIONS.target_info_dict.get("oem_fingerprint_properties")
-  recovery_mount_options = OPTIONS.source_info_dict.get(
-      "recovery_mount_options")
-  oem_dict = None
-  if oem_props is not None and len(oem_props) > 0:
-    if OPTIONS.oem_source is None:
-      raise common.ExternalError("OEM source required for this build")
-    script.Mount("/oem", recovery_mount_options)
-    oem_dict = common.LoadDictionaryFromLines(
-        open(OPTIONS.oem_source).readlines())
 
   AppendAssertions(script, OPTIONS.target_info_dict, oem_dict)
   device_specific.IncrementalOTA_Assertions()
@@ -886,6 +988,9 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
     script.AppendExtra("""
 if get_stage("%(bcb_dev)s") == "2/3" then
 """ % bcb_dev)
+
+    # Stage 2/3: Write recovery image to /recovery (currently running /boot).
+    script.Comment("Stage 2/3")
     script.AppendExtra("sleep(20);\n")
     script.WriteRawImage("/recovery", "recovery.img")
     script.AppendExtra("""
@@ -893,6 +998,9 @@ set_stage("%(bcb_dev)s", "3/3");
 reboot_now("%(bcb_dev)s", "recovery");
 else if get_stage("%(bcb_dev)s") != "3/3" then
 """ % bcb_dev)
+
+    # Stage 1/3: (a) Verify the current system.
+    script.Comment("Stage 1/3")
 
   # Dump fingerprints
   script.Print("Source: %s" % CalculateFingerprint(
@@ -909,11 +1017,10 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
     # patching on a device that's already on the target build will damage the
     # system. Because operations like move don't check the block state, they
     # always apply the changes unconditionally.
-    if OPTIONS.verify_fingerprint:
-      if blockimgdiff_version <= 2:
-        script.AssertSomeFingerprint(source_fp)
-      else:
-        script.AssertSomeFingerprint(source_fp, target_fp)
+    if blockimgdiff_version <= 2:
+      script.AssertSomeFingerprint(source_fp)
+    else:
+      script.AssertSomeFingerprint(source_fp, target_fp)
   else:
     if blockimgdiff_version <= 2:
       script.AssertSomeThumbprint(
@@ -922,6 +1029,13 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
       script.AssertSomeThumbprint(
           GetBuildProp("ro.build.thumbprint", OPTIONS.target_info_dict),
           GetBuildProp("ro.build.thumbprint", OPTIONS.source_info_dict))
+
+  # Check the required cache size (i.e. stashed blocks).
+  size = []
+  if system_diff:
+    size.append(system_diff.required_cache)
+  if vendor_diff:
+    size.append(vendor_diff.required_cache)
 
   if updating_boot:
     boot_type, boot_device = common.GetTypeAndDevice(
@@ -943,21 +1057,30 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
                         (boot_type, boot_device,
                          source_boot.size, source_boot.sha1,
                          target_boot.size, target_boot.sha1))
+      size.append(target_boot.size)
+
+  if size:
+    script.CacheFreeSpaceCheck(max(size))
 
   device_specific.IncrementalOTA_VerifyEnd()
 
   if OPTIONS.two_step:
-    script.WriteRawImage("/boot", "recovery.img")
+    # Stage 1/3: (b) Write recovery image to /boot.
+    _WriteRecoveryImageToBoot(script, output_zip)
+
     script.AppendExtra("""
 set_stage("%(bcb_dev)s", "2/3");
 reboot_now("%(bcb_dev)s", "");
 else
 """ % bcb_dev)
 
+    # Stage 3/3: Make changes.
+    script.Comment("Stage 3/3")
+
   # Verify the existing partitions.
-  system_diff.WriteVerifyScript(script)
+  system_diff.WriteVerifyScript(script, touched_blocks_only=True)
   if vendor_diff:
-    vendor_diff.WriteVerifyScript(script)
+    vendor_diff.WriteVerifyScript(script, touched_blocks_only=True)
 
   script.Comment("---- start making changes here ----")
 
@@ -965,6 +1088,7 @@ else
 
   system_diff.WriteScript(script, output_zip,
                           progress=0.8 if vendor_diff else 0.9)
+
   if vendor_diff:
     vendor_diff.WriteScript(script, output_zip, progress=0.1)
 
@@ -1005,6 +1129,7 @@ else
   if OPTIONS.wipe_user_data:
     script.Print("Erasing user data...")
     script.FormatPartition("/data")
+    metadata["ota-wipe"] = "yes"
 
   if OPTIONS.two_step:
     script.AppendExtra("""
@@ -1014,8 +1139,252 @@ endif;
 """ % bcb_dev)
 
   script.SetProgress(1)
-  script.AddToZip(target_zip, output_zip, input_path=OPTIONS.updater_binary)
+  # For downgrade OTAs, we prefer to use the update-binary in the source
+  # build that is actually newer than the one in the target build.
+  if OPTIONS.downgrade:
+    script.AddToZip(source_zip, output_zip, input_path=OPTIONS.updater_binary)
+  else:
+    script.AddToZip(target_zip, output_zip, input_path=OPTIONS.updater_binary)
+  metadata["ota-required-cache"] = str(script.required_cache)
   WriteMetadata(metadata, output_zip)
+
+
+def WriteVerifyPackage(input_zip, output_zip):
+  script = edify_generator.EdifyGenerator(3, OPTIONS.info_dict)
+
+  oem_props = OPTIONS.info_dict.get("oem_fingerprint_properties")
+  recovery_mount_options = OPTIONS.info_dict.get(
+      "recovery_mount_options")
+  oem_dict = None
+  if oem_props is not None and len(oem_props) > 0:
+    if OPTIONS.oem_source is None:
+      raise common.ExternalError("OEM source required for this build")
+    script.Mount("/oem", recovery_mount_options)
+    oem_dict = common.LoadDictionaryFromLines(
+        open(OPTIONS.oem_source).readlines())
+
+  target_fp = CalculateFingerprint(oem_props, oem_dict, OPTIONS.info_dict)
+  metadata = {
+      "post-build": target_fp,
+      "pre-device": GetOemProperty("ro.product.device", oem_props, oem_dict,
+                                   OPTIONS.info_dict),
+      "post-timestamp": GetBuildProp("ro.build.date.utc", OPTIONS.info_dict),
+  }
+
+  device_specific = common.DeviceSpecificParams(
+      input_zip=input_zip,
+      input_version=OPTIONS.info_dict["recovery_api_version"],
+      output_zip=output_zip,
+      script=script,
+      input_tmp=OPTIONS.input_tmp,
+      metadata=metadata,
+      info_dict=OPTIONS.info_dict)
+
+  AppendAssertions(script, OPTIONS.info_dict, oem_dict)
+
+  script.Print("Verifying device images against %s..." % target_fp)
+  script.AppendExtra("")
+
+  script.Print("Verifying boot...")
+  boot_img = common.GetBootableImage(
+      "boot.img", "boot.img", OPTIONS.input_tmp, "BOOT")
+  boot_type, boot_device = common.GetTypeAndDevice(
+      "/boot", OPTIONS.info_dict)
+  script.Verify("%s:%s:%d:%s" % (
+      boot_type, boot_device, boot_img.size, boot_img.sha1))
+  script.AppendExtra("")
+
+  script.Print("Verifying recovery...")
+  recovery_img = common.GetBootableImage(
+      "recovery.img", "recovery.img", OPTIONS.input_tmp, "RECOVERY")
+  recovery_type, recovery_device = common.GetTypeAndDevice(
+      "/recovery", OPTIONS.info_dict)
+  script.Verify("%s:%s:%d:%s" % (
+      recovery_type, recovery_device, recovery_img.size, recovery_img.sha1))
+  script.AppendExtra("")
+
+  system_tgt = GetImage("system", OPTIONS.input_tmp, OPTIONS.info_dict)
+  system_tgt.ResetFileMap()
+  system_diff = common.BlockDifference("system", system_tgt, src=None)
+  system_diff.WriteStrictVerifyScript(script)
+
+  if HasVendorPartition(input_zip):
+    vendor_tgt = GetImage("vendor", OPTIONS.input_tmp, OPTIONS.info_dict)
+    vendor_tgt.ResetFileMap()
+    vendor_diff = common.BlockDifference("vendor", vendor_tgt, src=None)
+    vendor_diff.WriteStrictVerifyScript(script)
+
+  # Device specific partitions, such as radio, bootloader and etc.
+  device_specific.VerifyOTA_Assertions()
+
+  script.SetProgress(1.0)
+  script.AddToZip(input_zip, output_zip, input_path=OPTIONS.updater_binary)
+  metadata["ota-required-cache"] = str(script.required_cache)
+  WriteMetadata(metadata, output_zip)
+
+
+def WriteABOTAPackageWithBrilloScript(target_file, output_file,
+                                      source_file=None):
+  """Generate an Android OTA package that has A/B update payload."""
+
+  # Setup signing keys.
+  if OPTIONS.package_key is None:
+    OPTIONS.package_key = OPTIONS.info_dict.get(
+        "default_system_dev_certificate",
+        "build/target/product/security/testkey")
+
+  # A/B updater expects a signing key in RSA format. Gets the key ready for
+  # later use in step 3, unless a payload_signer has been specified.
+  if OPTIONS.payload_signer is None:
+    cmd = ["openssl", "pkcs8",
+           "-in", OPTIONS.package_key + OPTIONS.private_key_suffix,
+           "-inform", "DER", "-nocrypt"]
+    rsa_key = common.MakeTempFile(prefix="key-", suffix=".key")
+    cmd.extend(["-out", rsa_key])
+    p1 = common.Run(cmd, stdout=subprocess.PIPE)
+    p1.wait()
+    assert p1.returncode == 0, "openssl pkcs8 failed"
+
+  # Stage the output zip package for package signing.
+  temp_zip_file = tempfile.NamedTemporaryFile()
+  output_zip = zipfile.ZipFile(temp_zip_file, "w",
+                               compression=zipfile.ZIP_DEFLATED)
+
+  # Metadata to comply with Android OTA package format.
+  oem_props = OPTIONS.info_dict.get("oem_fingerprint_properties", None)
+  oem_dict = None
+  if oem_props:
+    if OPTIONS.oem_source is None:
+      raise common.ExternalError("OEM source required for this build")
+    oem_dict = common.LoadDictionaryFromLines(
+        open(OPTIONS.oem_source).readlines())
+
+  metadata = {
+      "post-build": CalculateFingerprint(oem_props, oem_dict,
+                                         OPTIONS.info_dict),
+      "post-build-incremental" : GetBuildProp("ro.build.version.incremental",
+                                              OPTIONS.info_dict),
+      "pre-device": GetOemProperty("ro.product.device", oem_props, oem_dict,
+                                   OPTIONS.info_dict),
+      "post-timestamp": GetBuildProp("ro.build.date.utc", OPTIONS.info_dict),
+      "ota-required-cache": "0",
+      "ota-type": "AB",
+  }
+
+  if source_file is not None:
+    metadata["pre-build"] = CalculateFingerprint(oem_props, oem_dict,
+                                                 OPTIONS.source_info_dict)
+    metadata["pre-build-incremental"] = GetBuildProp(
+        "ro.build.version.incremental", OPTIONS.source_info_dict)
+
+  # 1. Generate payload.
+  payload_file = common.MakeTempFile(prefix="payload-", suffix=".bin")
+  cmd = ["brillo_update_payload", "generate",
+         "--payload", payload_file,
+         "--target_image", target_file]
+  if source_file is not None:
+    cmd.extend(["--source_image", source_file])
+  p1 = common.Run(cmd, stdout=subprocess.PIPE)
+  p1.wait()
+  assert p1.returncode == 0, "brillo_update_payload generate failed"
+
+  # 2. Generate hashes of the payload and metadata files.
+  payload_sig_file = common.MakeTempFile(prefix="sig-", suffix=".bin")
+  metadata_sig_file = common.MakeTempFile(prefix="sig-", suffix=".bin")
+  cmd = ["brillo_update_payload", "hash",
+         "--unsigned_payload", payload_file,
+         "--signature_size", "256",
+         "--metadata_hash_file", metadata_sig_file,
+         "--payload_hash_file", payload_sig_file]
+  p1 = common.Run(cmd, stdout=subprocess.PIPE)
+  p1.wait()
+  assert p1.returncode == 0, "brillo_update_payload hash failed"
+
+  # 3. Sign the hashes and insert them back into the payload file.
+  signed_payload_sig_file = common.MakeTempFile(prefix="signed-sig-",
+                                                suffix=".bin")
+  signed_metadata_sig_file = common.MakeTempFile(prefix="signed-sig-",
+                                                 suffix=".bin")
+  # 3a. Sign the payload hash.
+  if OPTIONS.payload_signer is not None:
+    cmd = [OPTIONS.payload_signer]
+    cmd.extend(OPTIONS.payload_signer_args)
+  else:
+    cmd = ["openssl", "pkeyutl", "-sign",
+           "-inkey", rsa_key,
+           "-pkeyopt", "digest:sha256"]
+  cmd.extend(["-in", payload_sig_file,
+              "-out", signed_payload_sig_file])
+
+  p1 = common.Run(cmd, stdout=subprocess.PIPE)
+  p1.wait()
+  assert p1.returncode == 0, "openssl sign payload failed"
+
+  # 3b. Sign the metadata hash.
+  if OPTIONS.payload_signer is not None:
+    cmd = [OPTIONS.payload_signer]
+    cmd.extend(OPTIONS.payload_signer_args)
+  else:
+    cmd = ["openssl", "pkeyutl", "-sign",
+           "-inkey", rsa_key,
+           "-pkeyopt", "digest:sha256"]
+  cmd.extend(["-in", metadata_sig_file,
+              "-out", signed_metadata_sig_file])
+  p1 = common.Run(cmd, stdout=subprocess.PIPE)
+  p1.wait()
+  assert p1.returncode == 0, "openssl sign metadata failed"
+
+  # 3c. Insert the signatures back into the payload file.
+  signed_payload_file = common.MakeTempFile(prefix="signed-payload-",
+                                            suffix=".bin")
+  cmd = ["brillo_update_payload", "sign",
+         "--unsigned_payload", payload_file,
+         "--payload", signed_payload_file,
+         "--signature_size", "256",
+         "--metadata_signature_file", signed_metadata_sig_file,
+         "--payload_signature_file", signed_payload_sig_file]
+  p1 = common.Run(cmd, stdout=subprocess.PIPE)
+  p1.wait()
+  assert p1.returncode == 0, "brillo_update_payload sign failed"
+
+  # 4. Dump the signed payload properties.
+  properties_file = common.MakeTempFile(prefix="payload-properties-",
+                                        suffix=".txt")
+  cmd = ["brillo_update_payload", "properties",
+         "--payload", signed_payload_file,
+         "--properties_file", properties_file]
+  p1 = common.Run(cmd, stdout=subprocess.PIPE)
+  p1.wait()
+  assert p1.returncode == 0, "brillo_update_payload properties failed"
+
+  if OPTIONS.wipe_user_data:
+    with open(properties_file, "a") as f:
+      f.write("POWERWASH=1\n")
+    metadata["ota-wipe"] = "yes"
+
+  # Add the signed payload file and properties into the zip.
+  common.ZipWrite(output_zip, properties_file, arcname="payload_properties.txt")
+  common.ZipWrite(output_zip, signed_payload_file, arcname="payload.bin",
+                  compress_type=zipfile.ZIP_STORED)
+  WriteMetadata(metadata, output_zip)
+
+  # If dm-verity is supported for the device, copy contents of care_map
+  # into A/B OTA package.
+  if OPTIONS.info_dict.get("verity") == "true":
+    target_zip = zipfile.ZipFile(target_file, "r")
+    care_map_path = "META/care_map.txt"
+    namelist = target_zip.namelist()
+    if care_map_path in namelist:
+      care_map_data = target_zip.read(care_map_path)
+      common.ZipWriteStr(output_zip, "care_map.txt", care_map_data)
+    else:
+      print "Warning: cannot find care map file in target_file package"
+    common.ZipClose(target_zip)
+
+  # Sign the whole package to comply with the Android OTA package format.
+  common.ZipClose(output_zip)
+  SignOutput(temp_zip_file.name, output_file)
+  temp_zip_file.close()
 
 
 class FileDifference(object):
@@ -1032,7 +1401,6 @@ class FileDifference(object):
     self.renames = renames = {}
     known_paths = set()
     largest_source_size = 0
-    self.remove_dir_list = []
 
     matching_file_cache = {}
     for fn, sf in source_data.items():
@@ -1109,31 +1477,13 @@ class FileDifference(object):
       script.FileCheck(tf.name, tf.sha1)
 
   def RemoveUnneededFiles(self, script, extras=()):
-    file_list = []
-    dir_list = []
-    for i in self.verbatim_targets:
-      if not i[0].endswith("/"):
-        file_list += ["/" + i[0]]
-      else:
-        dir_list += ["/" + i[0]]
-    for i in self.source_data:
-      if i not in self.target_data:
-        if not i.endswith("/"):
-          if i not in self.renames:
-            file_list += ["/" + i]
-        else:
-          dir_list += ["/" + i]
-          for src, tgt in self.renames.iteritems():
-            if i in src:
-              dir_list.remove("/" + i)
-              self.remove_dir_list += ["/" + i]
-    for i in list(extras):
-      if not i.endswith("/"):
-        file_list += [i]
-      else:
-        dir_list += [i]
-    script.DeleteFiles(sorted(file_list))
-    script.DeleteDirs(sorted(dir_list))
+    file_list = ["/" + i[0] for i in self.verbatim_targets]
+    file_list += ["/" + i for i in self.source_data
+                  if i not in self.target_data and i not in self.renames]
+    file_list += list(extras)
+    # Sort the list in descending order, which removes all the files first
+    # before attempting to remove the folder. (Bug: 22960996)
+    script.DeleteFiles(sorted(file_list, reverse=True))
 
   def TotalPatchSize(self):
     return sum(i[1].size for i in self.patch_list)
@@ -1166,7 +1516,6 @@ class FileDifference(object):
       for src, tgt in self.renames.iteritems():
         print "Renaming " + src + " to " + tgt.name
         script.RenameFile(src, tgt.name)
-      script.DeleteDirs(sorted(self.remove_dir_list))
 
 
 def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
@@ -1195,16 +1544,37 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
   if oem_props is not None and len(oem_props) > 0:
     if OPTIONS.oem_source is None:
       raise common.ExternalError("OEM source required for this build")
-    script.Mount("/oem", recovery_mount_options)
+    if not OPTIONS.oem_no_mount:
+      script.Mount("/oem", recovery_mount_options)
     oem_dict = common.LoadDictionaryFromLines(
         open(OPTIONS.oem_source).readlines())
 
   metadata = {
       "pre-device": GetOemProperty("ro.product.device", oem_props, oem_dict,
                                    OPTIONS.source_info_dict),
-      "post-timestamp": GetBuildProp("ro.build.date.utc",
-                                     OPTIONS.target_info_dict),
+      "ota-type": "FILE",
   }
+
+  post_timestamp = GetBuildProp("ro.build.date.utc", OPTIONS.target_info_dict)
+  pre_timestamp = GetBuildProp("ro.build.date.utc", OPTIONS.source_info_dict)
+  is_downgrade = long(post_timestamp) < long(pre_timestamp)
+
+  if OPTIONS.downgrade:
+    metadata["ota-downgrade"] = "yes"
+    if not is_downgrade:
+      raise RuntimeError("--downgrade specified but no downgrade detected: "
+                         "pre: %s, post: %s" % (pre_timestamp, post_timestamp))
+  else:
+    if is_downgrade:
+      # Non-fatal here to allow generating such a package which may require
+      # manual work to adjust the post-timestamp. A legit use case is that we
+      # cut a new build C (after having A and B), but want to enfore the
+      # update path of A -> C -> B. Specifying --downgrade may not help since
+      # that would enforce a data wipe for C -> B update.
+      print("\nWARNING: downgrade detected: pre: %s, post: %s.\n"
+            "The package may not be deployed properly. "
+            "Try --downgrade?\n" % (pre_timestamp, post_timestamp))
+    metadata["post-timestamp"] = post_timestamp
 
   device_specific = common.DeviceSpecificParams(
       source_zip=source_zip,
@@ -1230,8 +1600,7 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
                                    OPTIONS.source_info_dict)
 
   if oem_props is None:
-    if OPTIONS.verify_fingerprint:
-        script.AssertSomeFingerprint(source_fp, target_fp)
+    script.AssertSomeFingerprint(source_fp, target_fp)
   else:
     script.AssertSomeThumbprint(
         GetBuildProp("ro.build.thumbprint", OPTIONS.target_info_dict),
@@ -1239,6 +1608,10 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
 
   metadata["pre-build"] = source_fp
   metadata["post-build"] = target_fp
+  metadata["pre-build-incremental"] = GetBuildProp(
+      "ro.build.version.incremental", OPTIONS.source_info_dict)
+  metadata["post-build-incremental"] = GetBuildProp(
+      "ro.build.version.incremental", OPTIONS.target_info_dict)
 
   source_boot = common.GetBootableImage(
       "/tmp/boot.img", "boot.img", OPTIONS.source_tmp, "BOOT",
@@ -1253,10 +1626,7 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
       OPTIONS.source_info_dict)
   target_recovery = common.GetBootableImage(
       "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
-  updating_recovery = False
-  if source_recovery is not None and target_recovery is not None:
-    updating_recovery = (source_recovery.data != target_recovery.data)
-
+  updating_recovery = (source_recovery.data != target_recovery.data)
 
   # Here's how we divide up the progress bar:
   #  0.1 for verifying the start state (PatchCheck calls)
@@ -1300,6 +1670,9 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
     script.AppendExtra("""
 if get_stage("%(bcb_dev)s") == "2/3" then
 """ % bcb_dev)
+
+    # Stage 2/3: Write recovery image to /recovery (currently running /boot).
+    script.Comment("Stage 2/3")
     script.AppendExtra("sleep(20);\n")
     script.WriteRawImage("/recovery", "recovery.img")
     script.AppendExtra("""
@@ -1307,6 +1680,9 @@ set_stage("%(bcb_dev)s", "3/3");
 reboot_now("%(bcb_dev)s", "recovery");
 else if get_stage("%(bcb_dev)s") != "3/3" then
 """ % bcb_dev)
+
+    # Stage 1/3: (a) Verify the current system.
+    script.Comment("Stage 1/3")
 
   # Dump fingerprints
   script.Print("Source: %s" % (source_fp,))
@@ -1320,6 +1696,13 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
   so_far = system_diff.EmitVerification(script)
   if vendor_diff:
     so_far += vendor_diff.EmitVerification(script)
+
+  size = []
+  if system_diff.patch_list:
+    size.append(system_diff.largest_source_size)
+  if vendor_diff:
+    if vendor_diff.patch_list:
+      size.append(vendor_diff.largest_source_size)
 
   if updating_boot:
     d = common.Difference(target_boot, source_boot)
@@ -1337,25 +1720,25 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
                        source_boot.size, source_boot.sha1,
                        target_boot.size, target_boot.sha1))
     so_far += source_boot.size
+    size.append(target_boot.size)
 
-  size = []
-  if system_diff.patch_list:
-    size.append(system_diff.largest_source_size)
-  if vendor_diff:
-    if vendor_diff.patch_list:
-      size.append(vendor_diff.largest_source_size)
-  if size or updating_recovery or updating_boot:
+  if size:
     script.CacheFreeSpaceCheck(max(size))
 
   device_specific.IncrementalOTA_VerifyEnd()
 
   if OPTIONS.two_step:
-    script.WriteRawImage("/boot", "recovery.img")
+    # Stage 1/3: (b) Write recovery image to /boot.
+    _WriteRecoveryImageToBoot(script, output_zip)
+
     script.AppendExtra("""
 set_stage("%(bcb_dev)s", "2/3");
 reboot_now("%(bcb_dev)s", "");
 else
 """ % bcb_dev)
+
+    # Stage 3/3: Make changes.
+    script.Comment("Stage 3/3")
 
   script.Comment("---- start making changes here ----")
 
@@ -1425,6 +1808,7 @@ else
       common.MakeRecoveryPatch(OPTIONS.target_tmp, output_sink,
                                target_recovery, target_boot)
       script.DeleteFiles(["/system/recovery-from-boot.p",
+                          "/system/etc/recovery.img",
                           "/system/etc/install-recovery.sh"])
     print "recovery image changed; including as patch from boot."
   else:
@@ -1535,6 +1919,7 @@ else
   if OPTIONS.wipe_user_data:
     script.Print("Erasing user data...")
     script.FormatPartition("/data")
+    metadata["ota-wipe"] = "yes"
 
   if OPTIONS.two_step:
     script.AppendExtra("""
@@ -1546,16 +1931,23 @@ endif;
   if OPTIONS.verify and system_diff:
     script.Print("Remounting and verifying system partition files...")
     script.Unmount("/system")
-    script.Mount("/system")
+    script.Mount("/system", recovery_mount_options)
     system_diff.EmitExplicitTargetVerification(script)
 
   if OPTIONS.verify and vendor_diff:
     script.Print("Remounting and verifying vendor partition files...")
     script.Unmount("/vendor")
-    script.Mount("/vendor")
+    script.Mount("/vendor", recovery_mount_options)
     vendor_diff.EmitExplicitTargetVerification(script)
-  script.AddToZip(target_zip, output_zip, input_path=OPTIONS.updater_binary)
 
+  # For downgrade OTAs, we prefer to use the update-binary in the source
+  # build that is actually newer than the one in the target build.
+  if OPTIONS.downgrade:
+    script.AddToZip(source_zip, output_zip, input_path=OPTIONS.updater_binary)
+  else:
+    script.AddToZip(target_zip, output_zip, input_path=OPTIONS.updater_binary)
+
+  metadata["ota-required-cache"] = str(script.required_cache)
   WriteMetadata(metadata, output_zip)
 
 
@@ -1576,8 +1968,13 @@ def main(argv):
       OPTIONS.wipe_user_data = True
     elif o in ("-n", "--no_prereq"):
       OPTIONS.omit_prereq = True
+    elif o == "--downgrade":
+      OPTIONS.downgrade = True
+      OPTIONS.wipe_user_data = True
     elif o in ("-o", "--oem_settings"):
       OPTIONS.oem_source = a
+    elif o == "--oem_no_mount":
+      OPTIONS.oem_no_mount = True
     elif o in ("-e", "--extra_script"):
       OPTIONS.extra_script = a
     elif o in ("-a", "--aslr_mode"):
@@ -1600,8 +1997,7 @@ def main(argv):
     elif o == "--block":
       OPTIONS.block_based = True
     elif o in ("-b", "--binary"):
-      if os.path.exists(a):
-        OPTIONS.updater_binary = a
+      OPTIONS.updater_binary = a
     elif o in ("--no_fallback_to_full",):
       OPTIONS.fallback_to_full = False
     elif o == "--stash_threshold":
@@ -1610,6 +2006,14 @@ def main(argv):
       except ValueError:
         raise ValueError("Cannot parse value %r for option %r - expecting "
                          "a float" % (a, o))
+    elif o == "--gen_verify":
+      OPTIONS.gen_verify = True
+    elif o == "--log_diff":
+      OPTIONS.log_diff = a
+    elif o == "--payload_signer":
+      OPTIONS.payload_signer = a
+    elif o == "--payload_signer_args":
+      OPTIONS.payload_signer_args = shlex.split(a)
     else:
       return False
     return True
@@ -1624,6 +2028,7 @@ def main(argv):
                                  "full_bootloader",
                                  "wipe_user_data",
                                  "no_prereq",
+                                 "downgrade",
                                  "extra_script=",
                                  "worker_threads=",
                                  "aslr_mode=",
@@ -1632,34 +2037,71 @@ def main(argv):
                                  "block",
                                  "binary=",
                                  "oem_settings=",
+                                 "oem_no_mount",
                                  "verify",
                                  "no_fallback_to_full",
                                  "stash_threshold=",
+                                 "gen_verify",
+                                 "log_diff=",
+                                 "payload_signer=",
+                                 "payload_signer_args=",
                              ], extra_option_handler=option_handler)
 
   if len(args) != 2:
     common.Usage(__doc__)
     sys.exit(1)
 
+  if OPTIONS.downgrade:
+    # Sanity check to enforce a data wipe.
+    if not OPTIONS.wipe_user_data:
+      raise ValueError("Cannot downgrade without a data wipe")
+
+    # We should only allow downgrading incrementals (as opposed to full).
+    # Otherwise the device may go back from arbitrary build with this full
+    # OTA package.
+    if OPTIONS.incremental_source is None:
+      raise ValueError("Cannot generate downgradable full OTAs - consider"
+                       "using --omit_prereq?")
+
+  # Load the dict file from the zip directly to have a peek at the OTA type.
+  # For packages using A/B update, unzipping is not needed.
+  input_zip = zipfile.ZipFile(args[0], "r")
+  OPTIONS.info_dict = common.LoadInfoDict(input_zip)
+  common.ZipClose(input_zip)
+
+  ab_update = OPTIONS.info_dict.get("ab_update") == "true"
+
+  if ab_update:
+    if OPTIONS.incremental_source is not None:
+      OPTIONS.target_info_dict = OPTIONS.info_dict
+      source_zip = zipfile.ZipFile(OPTIONS.incremental_source, "r")
+      OPTIONS.source_info_dict = common.LoadInfoDict(source_zip)
+      common.ZipClose(source_zip)
+
+    if OPTIONS.verbose:
+      print "--- target info ---"
+      common.DumpInfoDict(OPTIONS.info_dict)
+
+      if OPTIONS.incremental_source is not None:
+        print "--- source info ---"
+        common.DumpInfoDict(OPTIONS.source_info_dict)
+
+    WriteABOTAPackageWithBrilloScript(
+        target_file=args[0],
+        output_file=args[1],
+        source_file=OPTIONS.incremental_source)
+
+    print "done."
+    return
+
   if OPTIONS.extra_script is not None:
-    if os.path.exists(OPTIONS.extra_script):
-      OPTIONS.extra_script = open(OPTIONS.extra_script).read()
-    else:
-      OPTIONS.extra_script = None
+    OPTIONS.extra_script = open(OPTIONS.extra_script).read()
 
   print "unzipping target target-files..."
   OPTIONS.input_tmp, input_zip = common.UnzipTemp(args[0])
 
   OPTIONS.target_tmp = OPTIONS.input_tmp
-  OPTIONS.info_dict = common.LoadInfoDict(input_zip)
-
-  # If this image was originally labelled with SELinux contexts, make sure we
-  # also apply the labels in our new image. During building, the "file_contexts"
-  # is in the out/ directory tree, but for repacking from target-files.zip it's
-  # in the root directory of the ramdisk.
-  if "selinux_fc" in OPTIONS.info_dict:
-    OPTIONS.info_dict["selinux_fc"] = os.path.join(
-        OPTIONS.input_tmp, "BOOT", "RAMDISK", "file_contexts")
+  OPTIONS.info_dict = common.LoadInfoDict(input_zip, OPTIONS.target_tmp)
 
   if OPTIONS.verbose:
     print "--- target info ---"
@@ -1683,59 +2125,74 @@ def main(argv):
   if OPTIONS.device_specific is not None:
     OPTIONS.device_specific = os.path.abspath(OPTIONS.device_specific)
 
-  while True:
+  if OPTIONS.info_dict.get("no_recovery") == "true":
+    raise common.ExternalError(
+        "--- target build has specified no recovery ---")
 
-    if OPTIONS.no_signing:
-      if os.path.exists(args[1]):
-        os.unlink(args[1])
-      output_zip = zipfile.ZipFile(args[1], "w",
-                                   compression=zipfile.ZIP_DEFLATED)
-    else:
-      temp_zip_file = tempfile.NamedTemporaryFile()
-      output_zip = zipfile.ZipFile(temp_zip_file, "w",
-                                   compression=zipfile.ZIP_DEFLATED)
+  # Use the default key to sign the package if not specified with package_key.
+  if not OPTIONS.no_signing:
+    if OPTIONS.package_key is None:
+      OPTIONS.package_key = OPTIONS.info_dict.get(
+          "default_system_dev_certificate",
+          "build/target/product/security/testkey")
 
-    cache_size = OPTIONS.info_dict.get("cache_size", None)
-    if cache_size is None:
-      raise RuntimeError("can't determine the cache partition size")
-    OPTIONS.cache_size = cache_size
+  # Set up the output zip. Create a temporary zip file if signing is needed.
+  if OPTIONS.no_signing:
+    if os.path.exists(args[1]):
+      os.unlink(args[1])
+    output_zip = zipfile.ZipFile(args[1], "w",
+                                 compression=zipfile.ZIP_DEFLATED)
+  else:
+    temp_zip_file = tempfile.NamedTemporaryFile()
+    output_zip = zipfile.ZipFile(temp_zip_file, "w",
+                                 compression=zipfile.ZIP_DEFLATED)
 
-    if OPTIONS.incremental_source is None:
+  # Non A/B OTAs rely on /cache partition to store temporary files.
+  cache_size = OPTIONS.info_dict.get("cache_size", None)
+  if cache_size is None:
+    print "--- can't determine the cache partition size ---"
+  OPTIONS.cache_size = cache_size
+
+  # Generate a verify package.
+  if OPTIONS.gen_verify:
+    WriteVerifyPackage(input_zip, output_zip)
+
+  # Generate a full OTA.
+  elif OPTIONS.incremental_source is None:
+    WriteFullOTAPackage(input_zip, output_zip)
+
+  # Generate an incremental OTA. It will fall back to generate a full OTA on
+  # failure unless no_fallback_to_full is specified.
+  else:
+    print "unzipping source target-files..."
+    OPTIONS.source_tmp, source_zip = common.UnzipTemp(
+        OPTIONS.incremental_source)
+    OPTIONS.target_info_dict = OPTIONS.info_dict
+    OPTIONS.source_info_dict = common.LoadInfoDict(source_zip,
+                                                   OPTIONS.source_tmp)
+    if OPTIONS.verbose:
+      print "--- source info ---"
+      common.DumpInfoDict(OPTIONS.source_info_dict)
+    try:
+      WriteIncrementalOTAPackage(input_zip, source_zip, output_zip)
+      if OPTIONS.log_diff:
+        out_file = open(OPTIONS.log_diff, 'w')
+        import target_files_diff
+        target_files_diff.recursiveDiff('',
+                                        OPTIONS.source_tmp,
+                                        OPTIONS.input_tmp,
+                                        out_file)
+        out_file.close()
+    except ValueError:
+      if not OPTIONS.fallback_to_full:
+        raise
+      print "--- failed to build incremental; falling back to full ---"
+      OPTIONS.incremental_source = None
       WriteFullOTAPackage(input_zip, output_zip)
-      if OPTIONS.package_key is None:
-        OPTIONS.package_key = OPTIONS.info_dict.get(
-            "default_system_dev_certificate",
-            "build/target/product/security/testkey")
-      common.ZipClose(output_zip)
-      break
 
-    else:
-      print "unzipping source target-files..."
-      OPTIONS.source_tmp, source_zip = common.UnzipTemp(
-          OPTIONS.incremental_source)
-      OPTIONS.target_info_dict = OPTIONS.info_dict
-      OPTIONS.source_info_dict = common.LoadInfoDict(source_zip)
-      if "selinux_fc" in OPTIONS.source_info_dict:
-        OPTIONS.source_info_dict["selinux_fc"] = os.path.join(
-            OPTIONS.source_tmp, "BOOT", "RAMDISK", "file_contexts")
-      if OPTIONS.package_key is None:
-        OPTIONS.package_key = OPTIONS.source_info_dict.get(
-            "default_system_dev_certificate",
-            "build/target/product/security/testkey")
-      if OPTIONS.verbose:
-        print "--- source info ---"
-        common.DumpInfoDict(OPTIONS.source_info_dict)
-      try:
-        WriteIncrementalOTAPackage(input_zip, source_zip, output_zip)
-        common.ZipClose(output_zip)
-        break
-      except ValueError:
-        if not OPTIONS.fallback_to_full:
-          raise
-        print "--- failed to build incremental; falling back to full ---"
-        OPTIONS.incremental_source = None
-        common.ZipClose(output_zip)
+  common.ZipClose(output_zip)
 
+  # Sign the generated zip package unless no_signing is specified.
   if not OPTIONS.no_signing:
     SignOutput(temp_zip_file.name, args[1])
     temp_zip_file.close()
