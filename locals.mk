@@ -187,6 +187,7 @@ SMALI_TO_BOSP_PYTHON_JOB := $(AUTOFIX)/.smalitobosp_python
 
 ################ merged_target_files ######################
 OUT_BOOT             := $(OUT_TARGET_DIR)/BOOT
+OUT_ROOT             := $(OUT_TARGET_DIR)/ROOT
 OUT_IMAGES           := $(OUT_TARGET_DIR)/IMAGES
 OUT_META             := $(OUT_TARGET_DIR)/META
 OUT_OTA              := $(OUT_TARGET_DIR)/OTA
@@ -338,6 +339,7 @@ GENMAP_TOOL              := $(PORT_BUILD_TOOLS)/GenMap.py
 
 RECOVERY_LINK            := $(PORT_BUILD_TOOLS)/releasetools/recoverylink.py
 OTA_FROM_TARGET_FILES    := $(PORT_BUILD_TOOLS)/releasetools/ota_from_target_files
+ADD_IMG_TO_TARGET_FILES  := $(PORT_BUILD_TOOLS)/releasetools/add_img_to_target_files
 IMG_FROM_TARGET_FILES    := $(PORT_BUILD_TOOLS)/releasetools/img_from_target_files
 SIGN_TARGET_FILES_APKS   := $(PORT_BUILD_TOOLS)/releasetools/sign_target_files_apks
 NON_MTK_WRITE_RAW_IMAGE	 := $(PORT_BUILD_TOOLS)/releasetools/non_mtk_writeRawImage.py

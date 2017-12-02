@@ -474,7 +474,7 @@ def ReplaceOtaKeys(input_tf_zip, output_tf_zip, misc_info):
   # extra_recovery_keys are used only in recovery.
   cmd = ([OPTIONS.java_path] + OPTIONS.java_args +
          ["-jar",
-          os.path.join(OPTIONS.search_path, "framework", "dumpkey.jar")] +
+          os.path.join(OPTIONS.search_path, "dumpkey.jar")] +
          mapped_keys + extra_recovery_keys)
   p = common.Run(cmd, stdout=subprocess.PIPE)
   new_recovery_keys, _ = p.communicate()

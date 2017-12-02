@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SIGN_JAR=$PORT_ROOT/build/tools/signapk.jar
+JAVA_LIBRARY_PATH=$PORT_ROOT/build/tools/lib64
 
 apkName=$1
 apkCertsTxt=$2
@@ -16,7 +17,7 @@ elif [ "x$certificate" != "x" ] && [ "x$private_key" != "x" ]; then
     echo $private_key
     cp $apkIn $apkIn.unsigned
     zip -d $apkIn.unsigned "META-INF/*" 2>&1 > /dev/null
-    java -jar $SIGN_JAR $PORT_ROOT/$certificate $PORT_ROOT/$private_key $apkIn.unsigned $apkOut;
+    java -Djava.library.path=$JAVA_LIBRARY_PATH -jar $SIGN_JAR $PORT_ROOT/$certificate $PORT_ROOT/$private_key $apkIn.unsigned $apkOut;
     rm $apkIn.unsigned
 else
     echo "WARNNING: No Signature found in $apkCertsTxt, using PRESIGNED."

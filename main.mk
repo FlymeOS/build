@@ -523,11 +523,19 @@ $(OUT_META)/misc_info.txt: $(OUT_OBJ_META)/misc_info.txt $(OUT_RECOVERY_FSTAB)
 	$(hide) cp $(OUT_OBJ_META)/misc_info.txt $@
 	$(hide) echo "<<< generate |target-files|META|misc_config.txt| done";
 
+$(OUT_META)/file_contexts.bin: bootimage ROOT
+	$(hide) if [ -f $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin ]; then \
+			cp -r $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin $(OUT_META)/file_contexts.bin; \
+		fi
+	$(hide) if [ -f $(OUT_ROOT)/file_contexts.bin ]; then \
+			cp $(OUT_ROOT)/file_contexts.bin $(OUT_META)/file_contexts.bin; \
+		fi
+
 .PHONY: META
 TARGET_FILES_META := META
 META: $(eval meta_sources := $(filter-out %/filesystem_config.txt %/apkcerts.txt %/linkinfo.txt %/misc_info.txt, \
         $(call get_all_files_in_dir,$(VENDOR_META))))
-META: $(OUT_META)/filesystem_config.txt $(OUT_META)/apkcerts.txt $(OUT_META)/misc_info.txt
+META: $(OUT_META)/filesystem_config.txt $(OUT_META)/apkcerts.txt $(OUT_META)/misc_info.txt $(OUT_META)/file_contexts.bin
 	$(hide) cp $(meta_sources) $(OUT_META);
 	$(hide) echo "<< generate |target-files|META| done"
         # convert filesystem_config to data
@@ -553,13 +561,30 @@ OTA $(OUT_OTA): $(strip $(call get_all_files_in_dir,$(VENDOR_OTA))) $(strip $(ca
 
 ####################### BOOT ############################
 .PHONY: BOOT
-OTA_TARGETS += BOOT
+#OTA_TARGETS += BOOT
 BOOT $(OUT_BOOT):
 	$(hide) echo ">> generate |target-files|BOOT| ...";
 	$(hide) rm -rf $(OUT_BOOT);
 	$(hide) mkdir -p $(OUT_BOOT)/RAMDISK;
 	$(hide) cp -rf $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts $(OUT_BOOT)/RAMDISK/file_contexts;
 	$(hide) echo "<< generate |target-files|BOOT| done";
+
+####################### ROOT ############################
+.PHONY: ROOT
+OTA_TARGETS += ROOT
+ROOT $(OUT_ROOT):
+	$(hide) if [ -d $(PRJ_ROOT)/ROOT ]; then \
+			echo ">> generate |target-files|ROOT| ..."; \
+			rm -rf $(OUT_ROOT); \
+			cp -a $(PRJ_ROOT)/ROOT $(OUT_TARGET_DIR); \
+		fi
+	$(hide) if [ -f $(OUT_ROOT)/file_contexts.bin ]; then \
+			echo ">> pack $(OUT_ROOT)/file_contexts.bin ..."; \
+			$(SEFCONTEXT_COMPILE_TOOL) -o $(OUT_ROOT)/file_contexts.bin $(OUT_ROOT)/file_contexts; \
+			rm -r $(OUT_ROOT)/file_contexts; \
+			echo "<< pack $(OUT_ROOT)/file_contexts.bin done"; \
+			echo "<< generate |target-files|ROOT| done"; \
+		fi
 
 ################# update the apk certs #################
 .PHONY: updateapkcerts
@@ -699,7 +724,10 @@ $(PRJ_FULL_OTA_ZIP): $(OUT_TARGET_ZIP) $(OUT_LOGO_BIN)
 	$(hide) echo "> generate ota.zip from target-files.zip (time-costly, be patient) ..."
 	$(hide) echo $(PRJ_FULL_OTA_ZIP) > $(PRJ_SAVED_OTA_NAME)
 	$(hide) echo $(OUT_TARGET_ZIP) > $(PRJ_SAVED_TARGET_NAME)
-	$(hide) $(OTA_FROM_TARGET_FILES) \
+ifeq ($(strip $(PRODUCE_IS_AB_UPDATE)),true)
+	$(hide) $(ADD_IMG_TO_TARGET_FILES) -a $(OUT_TARGET_ZIP)
+endif
+	$(hide) $(OTA_FROM_TARGET_FILES) -v \
 			$(if $(filter false,$(PRODUCE_BLOCK_BASED_OTA)),,--block) \
 			--binary $(PRJ_UPDATE_BINARY_OVERLAY) \
 			--no_prereq \

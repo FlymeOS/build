@@ -175,6 +175,8 @@ OPTIONS.log_diff = None
 OPTIONS.payload_signer = None
 OPTIONS.payload_signer_args = []
 
+OPTIONS.verify_fingerprint = False
+
 def MostPopularKey(d, default):
   """Given a dict, return the key corresponding to the largest
   value.  Returns 'default' if the dict is empty."""
@@ -380,7 +382,7 @@ class Item(object):
       # We only need to issue set_perm/set_perm_recursive commands if we're
       # supposed to be something different.
       if item.is_dir:
-        if current != item.best_subtree:
+        if current != item.best_subtree and item.name != "data" and item.name != "data/media":
           script.SetPermissionsRecursive("/"+item.name, *item.best_subtree)
           current = item.best_subtree
 
@@ -452,10 +454,13 @@ def SignOutput(temp_zip_name, output_zip_name):
 
 
 def AppendAssertions(script, info_dict, oem_dict=None):
+  if not UseAssertions(info_dict):
+    return
+
   oem_props = info_dict.get("oem_fingerprint_properties")
   if oem_props is None or len(oem_props) == 0:
     device = GetBuildProp("ro.product.device", info_dict)
-    script.AssertDevice(device)
+    script.AssertDeviceCoron(device)
   else:
     if oem_dict is None:
       raise common.ExternalError(
@@ -466,6 +471,13 @@ def AppendAssertions(script, info_dict, oem_dict=None):
             "The OEM file is missing the property %s" % prop)
       script.AssertOemProperty(prop, oem_dict.get(prop))
 
+def UseAssertions(info_dict):
+  if "use_assertions" in info_dict.keys():
+    if cmp("false", info_dict["use_assertions"]) == 0:
+      print ">>> Not append assertions as escape_assertions=true"
+      return False
+
+  return True
 
 def _WriteRecoveryImageToBoot(script, output_zip):
   """Find and write recovery image to /boot in two-step OTA.
@@ -508,6 +520,13 @@ def HasRecoveryPatch(target_files_zip):
 def HasVendorPartition(target_files_zip):
   try:
     target_files_zip.getinfo("VENDOR/")
+    return True
+  except KeyError:
+    return False
+
+def HasDataPartition(target_files_zip):
+  try:
+    target_files_zip.getinfo("DATA/")
     return True
   except KeyError:
     return False
@@ -604,7 +623,7 @@ def WriteFullOTAPackage(input_zip, output_zip):
       info_dict=OPTIONS.info_dict)
 
   has_recovery_patch = HasRecoveryPatch(input_zip)
-  block_based = OPTIONS.block_based and has_recovery_patch
+  block_based = OPTIONS.block_based
 
   metadata["ota-type"] = "BLOCK" if block_based else "FILE"
 
@@ -738,14 +757,24 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
       vendor_items.GetMetadata(input_zip)
       vendor_items.Get("vendor").SetPermissions(script)
 
-  common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
-  common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
+  #common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
+  if boot_img:
+    common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
 
   script.ShowProgress(0.05, 5)
   script.WriteRawImage("/boot", "boot.img")
 
   script.ShowProgress(0.2, 10)
   device_specific.FullOTA_InstallEnd()
+  if HasDataPartition(input_zip):
+    script.UnpackPackageDir("data", "/data")
+
+    data_items = ItemSet("data", "META/data_filesystem_config.txt")
+    data_symlinks = CopyPartitionFiles(data_items, input_zip, output_zip)
+    script.MakeSymlinks(data_symlinks)
+
+    data_items.GetMetadata(input_zip)
+    data_items.Get("data").SetPermissions(script)
 
   if OPTIONS.extra_script is not None:
     script.AppendExtra(OPTIONS.extra_script)
@@ -778,6 +807,9 @@ endif;
   metadata["ota-required-cache"] = str(script.required_cache)
   WriteMetadata(metadata, output_zip)
 
+  if block_based:
+    common.ZipWriteStr(output_zip, "system/build.prop",
+                       ""+input_zip.read("SYSTEM/build.prop"))
 
 def WritePolicyConfig(file_name, output_zip):
   common.ZipWrite(output_zip, file_name, os.path.basename(file_name))
@@ -901,8 +933,10 @@ def WriteBlockIncrementalOTAPackage(target_zip, source_zip, output_zip):
       OPTIONS.source_info_dict)
   target_boot = common.GetBootableImage(
       "/tmp/boot.img", "boot.img", OPTIONS.target_tmp, "BOOT")
-  updating_boot = (not OPTIONS.two_step and
-                   (source_boot.data != target_boot.data))
+  updating_boot = False
+  if source_boot is not None and target_boot is not None:
+    updating_boot = (not OPTIONS.two_step and
+                     (source_boot.data != target_boot.data))
 
   target_recovery = common.GetBootableImage(
       "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
@@ -1017,10 +1051,11 @@ else if get_stage("%(bcb_dev)s") != "3/3" then
     # patching on a device that's already on the target build will damage the
     # system. Because operations like move don't check the block state, they
     # always apply the changes unconditionally.
-    if blockimgdiff_version <= 2:
-      script.AssertSomeFingerprint(source_fp)
-    else:
-      script.AssertSomeFingerprint(source_fp, target_fp)
+    if OPTIONS.verify_fingerprint:
+      if blockimgdiff_version <= 2:
+        script.AssertSomeFingerprint(source_fp)
+      else:
+        script.AssertSomeFingerprint(source_fp, target_fp)
   else:
     if blockimgdiff_version <= 2:
       script.AssertSomeThumbprint(
@@ -1368,6 +1403,11 @@ def WriteABOTAPackageWithBrilloScript(target_file, output_file,
                   compress_type=zipfile.ZIP_STORED)
   WriteMetadata(metadata, output_zip)
 
+  target_zip = zipfile.ZipFile(target_file, "r")
+  common.ZipWriteStr(output_zip, "system/build.prop",
+                     ""+target_zip.read("SYSTEM/build.prop"))
+  common.ZipClose(target_zip)
+
   # If dm-verity is supported for the device, copy contents of care_map
   # into A/B OTA package.
   if OPTIONS.info_dict.get("verity") == "true":
@@ -1401,6 +1441,7 @@ class FileDifference(object):
     self.renames = renames = {}
     known_paths = set()
     largest_source_size = 0
+    self.remove_dir_list = []
 
     matching_file_cache = {}
     for fn, sf in source_data.items():
@@ -1477,13 +1518,31 @@ class FileDifference(object):
       script.FileCheck(tf.name, tf.sha1)
 
   def RemoveUnneededFiles(self, script, extras=()):
-    file_list = ["/" + i[0] for i in self.verbatim_targets]
-    file_list += ["/" + i for i in self.source_data
-                  if i not in self.target_data and i not in self.renames]
-    file_list += list(extras)
-    # Sort the list in descending order, which removes all the files first
-    # before attempting to remove the folder. (Bug: 22960996)
-    script.DeleteFiles(sorted(file_list, reverse=True))
+    file_list = []
+    dir_list = []
+    for i in self.verbatim_targets:
+      if not i[0].endswith("/"):
+        file_list += ["/" + i[0]]
+      else:
+        dir_list += ["/" + i[0]]
+    for i in self.source_data:
+      if i not in self.target_data:
+        if not i.endswith("/"):
+          if i not in self.renames:
+            file_list += ["/" + i]
+        else:
+          dir_list += ["/" + i]
+          for src, tgt in self.renames.iteritems():
+            if i in src:
+              dir_list.remove("/" + i)
+              self.remove_dir_list += ["/" + i]
+    for i in list(extras):
+      if not i.endswith("/"):
+        file_list += [i]
+      else:
+        dir_list += [i]
+    script.DeleteFiles(sorted(file_list))
+    script.DeleteDirs(sorted(dir_list))
 
   def TotalPatchSize(self):
     return sum(i[1].size for i in self.patch_list)
@@ -1516,6 +1575,7 @@ class FileDifference(object):
       for src, tgt in self.renames.iteritems():
         print "Renaming " + src + " to " + tgt.name
         script.RenameFile(src, tgt.name)
+      script.DeleteDirs(sorted(self.remove_dir_list))
 
 
 def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
@@ -1600,7 +1660,8 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
                                    OPTIONS.source_info_dict)
 
   if oem_props is None:
-    script.AssertSomeFingerprint(source_fp, target_fp)
+    if OPTIONS.verify_fingerprint:
+      script.AssertSomeFingerprint(source_fp, target_fp)
   else:
     script.AssertSomeThumbprint(
         GetBuildProp("ro.build.thumbprint", OPTIONS.target_info_dict),
@@ -1618,15 +1679,19 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
       OPTIONS.source_info_dict)
   target_boot = common.GetBootableImage(
       "/tmp/boot.img", "boot.img", OPTIONS.target_tmp, "BOOT")
-  updating_boot = (not OPTIONS.two_step and
-                   (source_boot.data != target_boot.data))
+  updating_boot = False
+  if source_boot is not None and target_boot is not None:
+    updating_boot = (not OPTIONS.two_step and
+                     (source_boot.data != target_boot.data))
 
   source_recovery = common.GetBootableImage(
       "/tmp/recovery.img", "recovery.img", OPTIONS.source_tmp, "RECOVERY",
       OPTIONS.source_info_dict)
   target_recovery = common.GetBootableImage(
       "/tmp/recovery.img", "recovery.img", OPTIONS.target_tmp, "RECOVERY")
-  updating_recovery = (source_recovery.data != target_recovery.data)
+  updating_recovery = False
+  if source_recovery is not None and target_recovery is not None:
+    updating_recovery = (source_recovery.data != target_recovery.data)
 
   # Here's how we divide up the progress bar:
   #  0.1 for verifying the start state (PatchCheck calls)
@@ -1997,7 +2062,8 @@ def main(argv):
     elif o == "--block":
       OPTIONS.block_based = True
     elif o in ("-b", "--binary"):
-      OPTIONS.updater_binary = a
+      if os.path.exists(a):
+        OPTIONS.updater_binary = a
     elif o in ("--no_fallback_to_full",):
       OPTIONS.fallback_to_full = False
     elif o == "--stash_threshold":
@@ -2095,13 +2161,20 @@ def main(argv):
     return
 
   if OPTIONS.extra_script is not None:
-    OPTIONS.extra_script = open(OPTIONS.extra_script).read()
+    if os.path.exists(OPTIONS.extra_script):
+      OPTIONS.extra_script = open(OPTIONS.extra_script).read()
+    else:
+      OPTIONS.extra_script = None
 
   print "unzipping target target-files..."
   OPTIONS.input_tmp, input_zip = common.UnzipTemp(args[0])
 
   OPTIONS.target_tmp = OPTIONS.input_tmp
   OPTIONS.info_dict = common.LoadInfoDict(input_zip, OPTIONS.target_tmp)
+
+  if "selinux_fc" in OPTIONS.info_dict:
+    OPTIONS.info_dict["selinux_fc"] = os.path.join(
+        OPTIONS.input_tmp, "META", "file_contexts.bin")
 
   if OPTIONS.verbose:
     print "--- target info ---"

@@ -230,6 +230,7 @@ function buildSystemDir_dd {
         mv $SYSTEM_DIR $OEM_TARGET_DIR/ROOT
         mv $OEM_TARGET_DIR/ROOT/system $SYSTEM_DIR
         mkdir $OEM_TARGET_DIR/ROOT/system
+        rm -f $SYSTEM_DIR/lost+found
     fi
     echo "<< dd system from device (time-costly, be patient) done"
     echo " "

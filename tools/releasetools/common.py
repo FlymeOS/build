@@ -41,12 +41,12 @@ class Options(object):
         "darwin": "out/host/darwin-x86",
     }
 
-    self.search_path = platform_search_path.get(sys.platform, None)
-    self.signapk_path = "framework/signapk.jar"  # Relative to search_path
+    self.search_path = os.path.join(os.environ["PORT_BUILD"], "tools");
+    self.signapk_path = "signapk.jar"  # Relative to search_path
     self.signapk_shared_library_path = "lib64"   # Relative to search_path
     self.extra_signapk_args = []
     self.java_path = "java"  # Use the one on the path by default.
-    self.java_args = ["-Xmx2048m"]  # The default JVM args.
+    self.java_args = ["-Xmx4096m"]  # The default JVM args.
     self.public_key_suffix = ".x509.pem"
     self.private_key_suffix = ".pk8"
     # use otatools built boot_signer by default
@@ -296,7 +296,7 @@ def LoadDictionaryFromLines(lines):
 def LoadRecoveryFSTab(read_helper, fstab_version, recovery_fstab_path,
                       system_root_image=False):
   class Partition(object):
-    def __init__(self, mount_point, fs_type, device, length, device2, context):
+    def __init__(self, mount_point, fs_type, device, length, device2, context=None):
       self.mount_point = mount_point
       self.fs_type = fs_type
       self.device = device
@@ -318,7 +318,10 @@ def LoadRecoveryFSTab(read_helper, fstab_version, recovery_fstab_path,
         continue
       pieces = line.split()
       if not 3 <= len(pieces) <= 4:
-        raise ValueError("malformed recovery.fstab line: \"%s\"" % (line,))
+        #raise ValueError("malformed recovery.fstab line: \"%s\"" % (line,))
+        print "Malformed recovery.fstab line: \"%s\"" % (line,)
+        print "Ignore the malformed line"
+        continue
       options = None
       if len(pieces) >= 4:
         if pieces[3].startswith("/"):
@@ -354,7 +357,10 @@ def LoadRecoveryFSTab(read_helper, fstab_version, recovery_fstab_path,
       # <src> <mnt_point> <type> <mnt_flags and options> <fs_mgr_flags>
       pieces = line.split()
       if len(pieces) != 5:
-        raise ValueError("malformed recovery.fstab line: \"%s\"" % (line,))
+        #raise ValueError("malformed recovery.fstab line: \"%s\"" % (line,))
+        print "Malformed recovery.fstab line: \"%s\"" % (line,)
+        print "Ignore the malformed line"
+        continue
 
       # Ignore entries that are managed by vold
       options = pieces[4]
@@ -390,8 +396,10 @@ def LoadRecoveryFSTab(read_helper, fstab_version, recovery_fstab_path,
   # system. Other areas assume system is always at "/system" so point /system
   # at /.
   if system_root_image:
-    assert not d.has_key("/system") and d.has_key("/")
-    d["/system"] = d["/"]
+    #assert not d.has_key("/system") and d.has_key("/")
+    #d["/system"] = d["/"]
+    if d.has_key("/"):
+      d["/system"] = d["/"]
   return d
 
 
@@ -568,12 +576,12 @@ def GetBootableImage(name, prebuilt_name, unpack_dir, tree_subdir,
                  prebuilt_name != "boot.img" or
                  info_dict.get("recovery_as_boot") == "true")
 
-  fs_config = "META/" + tree_subdir.lower() + "_filesystem_config.txt"
-  data = _BuildBootableImage(os.path.join(unpack_dir, tree_subdir),
-                             os.path.join(unpack_dir, fs_config),
-                             info_dict, has_ramdisk, two_step_image)
-  if data:
-    return File(name, data)
+  #fs_config = "META/" + tree_subdir.lower() + "_filesystem_config.txt"
+  #data = BuildBootableImage(os.path.join(unpack_dir, tree_subdir),
+  #                          os.path.join(unpack_dir, fs_config),
+  #                          info_dict)
+  #if data:
+  #  return File(name, data)
   return None
 
 
@@ -1638,6 +1646,8 @@ def MakeRecoveryPatch(input_dir, output_sink, recovery_img, boot_img,
   corresponding images.  info should be the dictionary returned by
   common.LoadInfoDict() on the input target_files.
   """
+
+  return
 
   if info_dict is None:
     info_dict = OPTIONS.info_dict

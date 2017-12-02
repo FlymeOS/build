@@ -44,7 +44,7 @@ endef
 
 # get all smali files in the directory, only for find xx.jar.out, process "$" symbol
 define get_all_smali_files_in_dir
-$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f | sed 's/\$$/\$$$$/g' | tee /tmp/find; fi)))
+$(strip $(filter-out $(1),$(shell if [ -d $(1) ]; then find $(1) -type f | sed 's/\$$/\$$$$/g' | sed '/#/d' | tee /tmp/find; fi)))
 endef
 
 define change_bracket

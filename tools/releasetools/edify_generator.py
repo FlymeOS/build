@@ -138,6 +138,26 @@ class EdifyGenerator(object):
                device, common.ErrorCode.DEVICE_MISMATCH, device)
     self.script.append(cmd)
 
+  def AssertDeviceCoron(self, device, devicealias=None):
+    if not devicealias:
+      import string
+      cmd = ('assert(getprop("ro.product.device") == "%s" ||\0'
+             'getprop("ro.build.product") == "%s" || \0'
+	      'getprop("ro.product.device") == "%s" ||\0'
+	      'getprop("ro.build.product") == "%s");' % (device, device, string.lower(device), string.lower(device)))
+      self.script.append(self.WordWrap(cmd))
+    else:
+      devices = devicealias.split(',')
+      devices.append(device)
+      cmd = ("assert(" +
+             " ||\0".join(['getprop("ro.product.device") == "%s"' % (b,)
+                           for b in devices]) +
+             " ||\0" +
+             " ||\0".join(['getprop("ro.build.product") == "%s"' % (c,)
+                           for c in devices]) +
+             ");")
+      self.script.append(self.WordWrap(cmd))
+
   def AssertSomeBootloader(self, *bootloaders):
     """Asert that the bootloader version is one of *bootloaders."""
     cmd = ("assert(" +
@@ -271,6 +291,13 @@ class EdifyGenerator(object):
     cmd = "delete(" + ",\0".join(['"%s"' % (i,) for i in file_list]) + ");"
     self.script.append(self.WordWrap(cmd))
 
+  def DeleteDirs(self, dir_list):
+    """Delete all dirs in dir_list."""
+    if not dir_list:
+      return
+    cmd = "delete_recursive(" + ",\0".join(['"%s"' % (i,) for i in dir_list]) + ");"
+    self.script.append(self.WordWrap(cmd))
+
   def DeleteFilesIfNotMatching(self, file_list):
     """Delete the file in file_list if not matching the checksum."""
     if not file_list:
@@ -336,6 +363,8 @@ class EdifyGenerator(object):
 
   def SetPermissions(self, fn, uid, gid, mode, selabel, capabilities):
     """Set file ownership and permissions."""
+    if uid == None or gid == None or mode == None:
+      return
     if not self.info.get("use_set_metadata", False):
       self.script.append('set_perm(%d, %d, 0%o, "%s");' % (uid, gid, mode, fn))
     else:
@@ -357,6 +386,13 @@ class EdifyGenerator(object):
     else:
       if capabilities is None:
         capabilities = "0x0"
+
+      if uid is None:
+        uid = 0
+
+      if gid is None:
+        gid = 0
+
       cmd = 'set_metadata_recursive("%s", "uid", %d, "gid", %d, ' \
           '"dmode", 0%o, "fmode", 0%o, "capabilities", %s' \
           % (fn, uid, gid, dmode, fmode, capabilities)
@@ -397,6 +433,8 @@ class EdifyGenerator(object):
 
     self.UnmountAll()
 
+    self.OverlayUpdaterScript(input_zip)
+
     common.ZipWriteStr(output_zip, "META-INF/com/google/android/updater-script",
                        "\n".join(self.script) + "\n")
 
@@ -406,3 +444,12 @@ class EdifyGenerator(object):
       data = open(input_path, "rb").read()
     common.ZipWriteStr(output_zip, "META-INF/com/google/android/update-binary",
                        data, perms=0o755)
+
+  def OverlayUpdaterScript(self, input_zip):
+    try:
+      data = input_zip.read("OTA/updater-script")
+      self.script = []
+      self.script.append(data)
+      print "Using OTA/updater-script..."
+    except KeyError:
+      pass
