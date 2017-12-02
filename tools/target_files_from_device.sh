@@ -16,6 +16,7 @@ CHECK_SU=$PORT_ROOT/tools/check-su
 TOOL_DIR=$PORT_BUILD/tools
 TARGET_FILES_TEMPLATE_DIR=$PORT_BUILD/target_files_template
 OTA_FROM_TARGET_FILES=$TOOL_DIR/releasetools/ota_from_target_files
+ADD_IMG_TO_TARGET_FILES=$TOOL_DIR/releasetools/add_img_to_target_files
 SYSTEM_INFO_PROCESS=$TOOL_DIR/releasetools/systeminfoprocess.py
 RECOVERY_LINK=$TOOL_DIR/releasetools/recoverylink.py
 GET_INFO_FROM_SCRIPT=$TOOL_DIR/getInfoFromScript.py
@@ -70,7 +71,7 @@ function waitForDeviceOnline {
     local timeout=30
     while [ $timeout -gt 0 ]
     do
-        if adb shell ls > /dev/null 2>&1; then
+        if adb shell ls /system > /dev/null 2>&1; then
             echo "<< device is online"
             break
         fi
@@ -88,14 +89,14 @@ function waitForDeviceOnline {
 function checkRootState {
     echo ">> Check root state of phone ..."
     waitForDeviceOnline
-    SECURE_PROP=$(adb shell cat /default.prop | grep -o "ro.secure=\w")
-    DEBUG_PROP=$(adb shell cat /default.prop | grep -o "ro.debuggable=\w")
+    SECURE_PROP=$(adb shell getprop ro.secure)
+    DEBUG_PROP=$(adb shell getprop ro.debuggable)
 
     $CHECK_SU
     local ret=$?
     if [ $ret == 0 ]; then
         ROOT_STATE="system_root"
-    elif [ "$SECURE_PROP" = "ro.secure=0" -o "$DEBUG_PROP" = "ro.debuggable=1" ];then
+    elif [ x"$SECURE_PROP" = x"0" -o x"$DEBUG_PROP" = x"1" ];then
         ROOT_STATE="kernel_root"
         adb root
         waitForDeviceOnline
@@ -115,7 +116,11 @@ function copyTargetFilesTemplate {
     rm -rf $OEM_TARGET_DIR
     rm -f $OEM_TARGET_ZIP
     mkdir -p $OEM_TARGET_DIR
-    cp -r $TARGET_FILES_TEMPLATE_DIR/* $OEM_TARGET_DIR
+    if [ x"$IS_AB_SYSTEM" = x"true" ]; then
+        cp -r $PORT_BUILD/target_files_template_AB/* $OEM_TARGET_DIR
+    else
+        cp -r $TARGET_FILES_TEMPLATE_DIR/* $OEM_TARGET_DIR
+    fi
     echo "<< copy $TARGET_FILES_TEMPLATE_DIR to $OEM_TARGET_DIR ..."
 }
 
@@ -140,12 +145,20 @@ function copyTargetFilesTemplate {
 #################################################################################################
 function updateSystemPartitionSize {
     echo ">> get system partition size ..."
-    SYSTEM_MOUNT_POINT=$(adb shell mount | grep "/cache" | awk 'BEGIN{FS="/cache"}{print $1}')/system
-    if [ "$ROOT_STATE" = "system_root" ];then
-        SYSTEM_SOFT_MOUNT_POINT=$(adb shell su -c ls -l $SYSTEM_MOUNT_POINT | awk -F '/dev' '{print $2}' |awk -F '/' '{print $NF}')
+    if [ x"$IS_AB_SYSTEM" = x"true" ]; then
+        echo ">> Is A/B System Device"
+        slot_suffix=$(adb shell getprop ro.boot.slot_suffix)
+        if [ x"$slot_suffix" = x ]; then
+            slot_suffix="_a"
+        fi
+    fi
+    if [ "$ROOT_STATE" = "system_root" ]; then
+        SYSTEM_MOUNT_POINT=$(adb shell su -c find /dev/block/ -name system$slot_suffix)
+        SYSTEM_SOFT_MOUNT_POINT=$(adb shell su -c ls -l $SYSTEM_MOUNT_POINT | awk -F '->' '{print $2}' | awk -F '/' '{print $NF}')
     else
         waitForDeviceOnline
-        SYSTEM_SOFT_MOUNT_POINT=$(adb shell ls -l $SYSTEM_MOUNT_POINT | awk -F '/dev' '{print $2}' |awk -F '/' '{print $NF}')
+        SYSTEM_MOUNT_POINT=$(adb shell find /dev/block/ -name "system"$slot_suffix)
+        SYSTEM_SOFT_MOUNT_POINT=$(adb shell ls -l $SYSTEM_MOUNT_POINT | awk -F '->' '{print $2}' | awk -F '/' '{print $NF}')
     fi
     SYSTEM_PARTITION_SIZE=$(adb shell cat proc/partitions | grep $SYSTEM_SOFT_MOUNT_POINT | awk 'BEGIN{FS=" "}{print $3}')
     if [ x"$SYSTEM_PARTITION_SIZE" = x ] || [ -z "$(echo $SYSTEM_PARTITION_SIZE | sed -n "/^[0-9]\+$/p")" ]; then
@@ -201,16 +214,72 @@ function buildSystemInfo {
     echo " "
 }
 
+# get system files info from phone
+function buildSystemDir_dd {
+    echo ">> dd system from device (time-costly, be patient) ..."
+    waitForDeviceOnline
+    if [ "$ROOT_STATE" = "system_root" ];then
+        adb shell su -c dd if=$SYSTEM_MOUNT_POINT of=/sdcard/system.img bs=2048 > /dev/null 2>&1
+    else
+        adb shell dd if=$SYSTEM_MOUNT_POINT of=/sdcard/system.img bs=2048 > /dev/null 2>&1
+    fi
+    adb pull /sdcard/system.img $OUT_DIR/system.img  > /dev/null 2>&1
+    adb shell rm /sdcard/system.img
+    unpack_systemimg $OUT_DIR/system.img $SYSTEM_DIR
+    if [ x"$IS_AB_SYSTEM" = x"true" ]; then
+        mv $SYSTEM_DIR $OEM_TARGET_DIR/ROOT
+        mv $OEM_TARGET_DIR/ROOT/system $SYSTEM_DIR
+        mkdir $OEM_TARGET_DIR/ROOT/system
+    fi
+    echo "<< dd system from device (time-costly, be patient) done"
+    echo " "
+}
+
+function unpack_systemimg {
+    local systemimg=$1
+    local outdir=$2
+
+    if [ "x$systemimg" = "x" ]; then
+        return 1
+    fi
+
+    echo ">>> begin unpack $systemimg"
+    if [ "x$outdir" = "x" ]; then
+        outdir=$PWD
+    fi
+
+    if [ -f $systemimg ]; then
+        mkdir -p $outdir
+        tmpMnt=`mktemp -dt system.XXXX.mnt`
+        sudo mount -t ext4 -o loop $systemimg $tmpMnt
+
+        sudo cp -rf $tmpMnt/* $outdir
+        sudo umount $tmpMnt
+        sudo chmod 777 -R $outdir
+
+        rm -rf $tmpMnt
+
+        echo ">>> success unpack $systemimg to $outdir"
+        return 0
+    else
+        echo ">>> $systemimg doesn't exist! "
+    fi
+
+    echo ">>> failed to unpack $systemimg"
+    return 1
+}
+
 # build apkcerts.txt from packages.xml
 function buildApkcerts {
     echo ">> build apkcerts.txt from device ..."
     if [ x"$ROOT_STATE" = x"system_root" ];then
         adb shell su -c "chmod 666 /data/system/packages.xml"
+        adb shell su -c "cat /data/system/packages.xml" > $OEM_TARGET_DIR/packages.xml
     else
         adb shell chmod 666 /data/system/packages.xml
+        adb shell cat /data/system/packages.xml > $OEM_TARGET_DIR/packages.xml
     fi
 
-    adb shell cat /data/system/packages.xml > $OEM_TARGET_DIR/packages.xml
     python $TOOL_DIR/apkcerts.py $OEM_TARGET_DIR/packages.xml $META_DIR/apkcerts.txt
     cat $META_DIR/apkcerts.txt | sort > $META_DIR/temp.txt
     mv $META_DIR/temp.txt $META_DIR/apkcerts.txt
@@ -346,9 +415,9 @@ function buildSystemDir {
 function prepareBootRecovery {
     echo ">> prepare boot.img and recovery.img ..."
     if [ -f $PRJ_ROOT/boot.img ];then
-        mkdir -p $OEM_TARGET_DIR/BOOTABLE_IMAGES
-        cp -f $PRJ_ROOT/boot.img $OEM_TARGET_DIR/BOOTABLE_IMAGES/boot.img
-        echo ">>> Copy boot.img to $OEM_TARGET_DIR/BOOTABLE_IMAGES/boot.img"
+        mkdir -p $OEM_TARGET_DIR/IMAGES
+        cp -f $PRJ_ROOT/boot.img $OEM_TARGET_DIR/IMAGES/boot.img
+        echo ">>> Copy boot.img to $OEM_TARGET_DIR/IMAGES/boot.img"
     fi
     if [ ! -d $RECOVERY_ETC_DIR ];then
         mkdir -p $RECOVERY_ETC_DIR
@@ -378,9 +447,10 @@ function targetFromPhone {
     copyTargetFilesTemplate
     updateSystemPartitionSize
 
-    buildSystemInfo
+    #buildSystemInfo
     buildApkcerts
-    buildSystemDir
+    #buildSystemDir
+    buildSystemDir_dd
     #recoverSystemSymlink
 
     prepareBootRecovery
@@ -473,10 +543,13 @@ function buildOtaPackage {
         echo "<< ERROR: Can not find $VENDOR_TARGET_ZIP!!"
         exit $ERR_NOT_VENDOR_TARGET
     fi
+    if [ x"$IS_AB_SYSTEM" = x"true" ]; then
+        $ADD_IMG_TO_TARGET_FILES -a $VENDOR_TARGET_ZIP
+    fi
     if [ x"$1" = x"block" ];then
-        $OTA_FROM_TARGET_FILES --no_prereq --block -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
+        $OTA_FROM_TARGET_FILES -v --no_prereq --block -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
     else
-        $OTA_FROM_TARGET_FILES --no_prereq -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
+        $OTA_FROM_TARGET_FILES -v --no_prereq -k $PORT_ROOT/build/security/testkey $VENDOR_TARGET_ZIP $OUTPUT_OTA_PACKAGE
     fi
     if [ ! -f $OUTPUT_OTA_PACKAGE ];then
         echo "<< ERROR: Failed to build $OUTPUT_OTA_PACKAGE!!"
@@ -493,7 +566,9 @@ function usage {
     exit $ERR_MISSION_FAILED
 }
 
-if [ $# != 1 ];then
+IS_AB_SYSTEM=$2
+
+if [ $# -lt 1 ];then
     usage
 elif [ "$1" = "target" ];then
     checkForEnvPrepare

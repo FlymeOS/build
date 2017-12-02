@@ -187,7 +187,7 @@ SMALI_TO_BOSP_PYTHON_JOB := $(AUTOFIX)/.smalitobosp_python
 
 ################ merged_target_files ######################
 OUT_BOOT             := $(OUT_TARGET_DIR)/BOOT
-OUT_BOOTABLE_IMAGES  := $(OUT_TARGET_DIR)/BOOTABLE_IMAGES
+OUT_IMAGES           := $(OUT_TARGET_DIR)/IMAGES
 OUT_META             := $(OUT_TARGET_DIR)/META
 OUT_OTA              := $(OUT_TARGET_DIR)/OTA
 OUT_RECOVERY         := $(OUT_TARGET_DIR)/RECOVERY
@@ -376,6 +376,9 @@ AUTOFIX_TOOL    := python $(PORT_TOOLS)/smaliparser/reject.py
 PUSH                 := $(PORT_TOOLS)/push
 FLASH                := $(PORT_TOOLS)/bootimgpack/flash.py
 DEEFAULT_PERMISSION  ?= 644
+
+SEFCONTEXT_TOOL := $(PORT_TOOLS)/reverses/sefcontext/sefcontext
+SEFCONTEXT_COMPILE_TOOL := $(PORT_BUILD_TOOLS)/bin/sefcontext_compile
 
 ################### tools for project ####################
 PRJ_CUSTOM_TARGETFILES := $(PRJ_ROOT)/custom_targetfiles.sh

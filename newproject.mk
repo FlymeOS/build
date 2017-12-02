@@ -9,8 +9,11 @@ TARGET_FILES_FROM_DEVICE:= $(PORT_BUILD_TOOLS)/target_files_from_device.sh
 
 ##################### newproject ########################
 ./PHONY: newproject
-
-newproject: prepare-vendor prepare-vendor-boot prepare-vendor-recovery decodefile recovery_link update_file_system_config
+ifeq ($(PRODUCE_IS_AB_UPDATE),true)
+newproject: prepare-vendor prepare-root unpack-boot prepare-vendor-recovery decodefile update_file_system_config
+else
+newproject: prepare-vendor unpack-boot prepare-vendor-recovery decodefile update_file_system_config
+endif
 	$(hide) if [ -f $(OUT_DIR)/build-info-to-user.txt ];then \
 			cat $(OUT_DIR)/build-info-to-user.txt; \
 		fi
@@ -23,7 +26,7 @@ newproject: prepare-vendor prepare-vendor-boot prepare-vendor-recovery decodefil
 $(OEM_TARGET_ZIP): $(PRJ_RECOVERY_FSTAB)
 	$(hide) echo ">> prepare vendor ..."
 	$(hide) echo ">>> generate vendor target files ..."
-	$(hide) $(TARGET_FILES_FROM_DEVICE) target
+	$(hide) $(TARGET_FILES_FROM_DEVICE) target $(PRODUCE_IS_AB_UPDATE)
 	$(hide) echo "<<< generate vendor target files done"
 
 $(OEM_TARGET_STD_ZIP): $(OEM_TARGET_ZIP)
@@ -53,6 +56,18 @@ $(PRJ_RECOVERY_FSTAB): unpack-recovery
 	$(hide) echo "* get recovery.fstab ==> $(PRJ_RECOVERY_FSTAB)"
 	$(hide) echo " "
 endif
+
+./PHONY: prepare-root
+prepare-root :
+	$(hide) echo ">> prepare root ..."
+	$(hide) rm -rf $(PRJ_ROOT)/ROOT
+	$(hide) if [ -d $(VENDOR_DIR)/ROOT ]; then cp -a $(VENDOR_DIR)/ROOT $(PRJ_ROOT); fi;
+	$(hide) if [ -f $(PRJ_ROOT)/ROOT/file_contexts.bin ]; then \
+			echo ">> unpack $(PRJ_ROOT)/ROOT/file_contexts.bin ...";  \
+			$(SEFCONTEXT_TOOL) -o $(PRJ_ROOT)/ROOT/file_contexts $(PRJ_ROOT)/ROOT/file_contexts.bin; \
+			echo "<< unpack $(PRJ_ROOT)/ROOT/file_contexts.bin done";  \
+		fi
+	$(hide) echo "<< prepare root done"
 
 ./PHONY: prepare-vendor-boot
 prepare-vendor-boot : unpack-boot prepare-vendor
@@ -114,18 +129,29 @@ decodefile: $(PRJ_DECODE_APKS_OUT) $(PRJ_DECODE_JARS_OUT)
 vendorota oemotarom: $(VENDOR_OTA_ZIP)
 	$(hide) echo "* out ==> $(VENDOR_OTA_ZIP)"
 
-$(VENDOR_TARGET_ZIP): $(VENDOR_RECOVERY_FSTAB)
+$(VENDOR_TARGET_ZIP): $(VENDOR_RECOVERY_FSTAB) bootimage
 	$(hide) echo ">> build vendor target files ..."
 	$(hide) if [ ! -d $(OUT_DIR) ]; then mkdir -p $(OUT_DIR); fi
 	$(hide) rm -rf $(VENDOR_TARGET_DIR)
 	$(hide) cp -r $(VENDOR_DIR) $(VENDOR_TARGET_DIR)
-	$(hide) echo ">>> recover the link files for $(VENDOR_TARGET_DIR) ..."
-	$(hide) $(RECOVERY_LINK) $(VENDOR_TARGET_DIR)/META/linkinfo.txt $(VENDOR_TARGET_DIR);
-	$(hide) echo "<<< recover the link files for $(VENDOR_TARGET_DIR) done"
 	$(hide) mv $(VENDOR_TARGET_DIR)/system $(VENDOR_TARGET_DIR)/SYSTEM
-	$(hide) rm -rf $(VENDOR_TARGET_DIR)/BOOTABLE_IMAGES
+	$(hide) if [ -f $(OUT_DIR)/boot.img ]; then cp -r $(OUT_DIR)/boot.img $(VENDOR_TARGET_DIR)/IMAGES/boot.img; fi
+	$(hide) if [ -f $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin ]; then \
+			cp -r $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin $(VENDOR_TARGET_DIR)/META/file_contexts.bin; \
+		fi
+	$(hide) if [ -d $(PRJ_ROOT)/ROOT ]; then \
+			rm -rf $(VENDOR_TARGET_DIR)/ROOT; \
+			cp -a $(PRJ_ROOT)/ROOT $(VENDOR_TARGET_DIR); \
+		fi
+	$(hide) if [ -f $(VENDOR_TARGET_DIR)/ROOT/file_contexts.bin ]; then \
+			echo ">> pack $(VENDOR_TARGET_DIR)/ROOT/file_contexts.bin ..."; \
+			$(SEFCONTEXT_COMPILE_TOOL) -o $(VENDOR_TARGET_DIR)/ROOT/file_contexts.bin $(VENDOR_TARGET_DIR)/ROOT/file_contexts; \
+			rm -r $(VENDOR_TARGET_DIR)/ROOT/file_contexts; \
+			echo "<< pack $(VENDOR_TARGET_DIR)/ROOT/file_contexts.bin done"; \
+			cp $(VENDOR_TARGET_DIR)/ROOT/file_contexts.bin $(VENDOR_TARGET_DIR)/META/file_contexts.bin; \
+		fi
 	$(hide) len=$$(grep -v "^#" $(VENDOR_RECOVERY_FSTAB) | egrep "ext|emmc|vfat|yaffs" | awk '{print NF}' | head -1); \
-		isNew=$$(grep -v "^#" $(VENDOR_RECOVERY_FSTAB) | egrep "ext|emmc|vfat|yaffs" | awk '{if ($$2 == "/system"){print "NEW"}}'); \
+		isNew=$$(grep -v "^#" $(VENDOR_RECOVERY_FSTAB) | egrep "ext|emmc|vfat|yaffs" | awk '{if ($$2 == "/system"||$$2 == "/"){print "NEW"}}'); \
 		if [ "x$$len" = "x5" ] && [ "x$$isNew" = "xNEW" ]; \
 		then \
 			sed -i '/^fstab_version[ \t]*=.*/d' $(VENDOR_TARGET_DIR)/META/misc_info.txt; \
@@ -145,9 +171,9 @@ $(VENDOR_TARGET_ZIP): $(VENDOR_RECOVERY_FSTAB)
 $(VENDOR_OTA_ZIP): $(VENDOR_TARGET_ZIP)
 	$(hide) echo "> build vendor ota package ..."
 	$(hide) if [ x"$(strip $(PRODUCE_BLOCK_BASED_OTA))" = x"false" ];then \
-			$(TARGET_FILES_FROM_DEVICE) ota; \
+			$(TARGET_FILES_FROM_DEVICE) ota $(PRODUCE_IS_AB_UPDATE); \
 		else \
-			$(TARGET_FILES_FROM_DEVICE) ota_block; \
+			$(TARGET_FILES_FROM_DEVICE) ota_block $(PRODUCE_IS_AB_UPDATE); \
 		fi;
 	$(hide) echo "< build vendor ota package done"
 
@@ -163,23 +189,35 @@ recovery_link: $(VENDOR_DIR)
 update_file_system_config: $(VENDOR_DIR)
 	$(hide) echo "> update file system config info ..."
 	$(hide) if [ ! -d $(OUT_DIR) ]; then mkdir -p $(OUT_DIR); fi
-	$(hide) if [ ! -f $(OUT_DIR)/file_contexts ]; then \
-			if [ -f $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts ]; then \
-				cp $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts $(OUT_DIR)/file_contexts; \
+	$(hide) if [ ! -f $(OUT_DIR)/file_contexts.bin ]; then \
+			if [ -f $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts.bin ]; then \
+				if [ x"$(PRODUCE_IS_AB_UPDATE)" = x"true" ]; then \
+					cp $(PRJ_ROOT)/ROOT/file_contexts.bin $(OUT_DIR)/file_contexts.bin; \
+				else \
+					cp $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts.bin $(OUT_DIR)/file_contexts.bin; \
+				fi; \
 			else \
-				echo "get file_contexts from phone ..."; \
-				adb pull /file_contexts $(OUT_DIR)/file_contexts \
+				echo "get file_contexts.bin from phone ..."; \
+				adb pull /file_contexts.bin $(OUT_DIR)/file_contexts.bin; \
 				echo -n ""; \
 			fi; \
 		fi;
-	$(hide) if [ -f $(OUT_DIR)/file_contexts ]; then \
+	$(hide) if [ -f $(OUT_DIR)/file_contexts.bin ]; then \
 			cd $(VENDOR_DIR); zip -qry $(PRJ_ROOT)/$(OUT_DIR)/vendor_system.zip system; cd - > /dev/null; \
 			zipinfo -1 $(OUT_DIR)/vendor_system.zip \
-				| $(PORT_ROOT)/build/tools/bin/fs_config -C -D $(VENDOR_SYSTEM) -S $(OUT_DIR)/file_contexts \
+				| $(PORT_ROOT)/build/tools/bin/fs_config -C -D $(VENDOR_SYSTEM) -S $(OUT_DIR)/file_contexts.bin \
 				| sort > $(VENDOR_META)/filesystem_config.txt; \
+			rm $(PRJ_ROOT)/$(OUT_DIR)/vendor_system.zip; \
+			if [ x"$(PRODUCE_IS_AB_UPDATE)" = x"true" ]; then \
+				cd $(VENDOR_DIR)/ROOT; zip -qry $(PRJ_ROOT)/$(OUT_DIR)/vendor_root.zip .; cd - > /dev/null; \
+				zipinfo -1 $(OUT_DIR)/vendor_root.zip \
+					| $(PORT_ROOT)/build/tools/bin/fs_config -C -D $(VENDOR_DIR)/ROOT -S $(OUT_DIR)/file_contexts.bin \
+					| sort > $(VENDOR_META)/root_filesystem_config.txt; \
+				rm $(PRJ_ROOT)/$(OUT_DIR)/vendor_root.zip; \
+			fi; \
 		else \
-			echo "ERROR: Please ensure adb can find your device or can adb pull file_contexts and then rerun this script!!"; \
-			echo "Maby you can get the file_contexts from phone or ota.zip and copy to devices/$(PRJ_NAME)/$(OUT_DIR)"; \
+			echo "ERROR: Please ensure adb can find your device or can adb pull file_contexts.bin and then rerun this script!!"; \
+			echo "Maby you can get the file_contexts.bin from phone or ota.zip and copy to devices/$(PRJ_NAME)/$(OUT_DIR)"; \
 			echo ""; \
 		fi;
 	$(hide) echo "< update file system config info done"

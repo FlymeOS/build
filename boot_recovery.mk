@@ -19,7 +19,7 @@ PRJ_BOOT_DIR             := $(PRJ_ROOT)/$(BOOT_IMG).out
 VENDOR_BOOT              := $(VENDOR_DIR)/BOOT
 SOURCE_BOOT              := $(BOARD_DIR)/BOOT
 OUT_OBJ_BOOT             := $(OUT_OBJ_DIR)/BOOT
-OUT_BOOT_IMG             := $(OUT_BOOTABLE_IMAGES)/$(BOOT_IMG)
+OUT_BOOT_IMG             := $(OUT_IMAGES)/$(BOOT_IMG)
 
 SOURCE_BOOT_RAMDISK_SERVICEEXT  := $(SOURCE_BOOT)/RAMDISK/sbin/serviceext
 OUT_OBJ_BOOT_RAMDISK_SERVICEEXT	:= $(OUT_OBJ_BOOT)/RAMDISK/sbin/serviceext
@@ -43,6 +43,12 @@ unpack-boot:
 	$(hide) $(UNPACK_BOOT_PY) $(PRJ_BOOT_IMG) $(OUT_OBJ_BOOT);
 	$(hide) cp -r $(OUT_OBJ_BOOT) $(PRJ_BOOT_DIR)
 	$(hide) echo "<< unpack $(PRJ_BOOT_IMG) to $(PRJ_BOOT_DIR) done"
+	$(hide) if [ -f $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts.bin ]; then \
+			echo ">> unpack $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts.bin ...";  \
+			$(SEFCONTEXT_TOOL) -o $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts.bin; \
+			echo "<< unpack $(PRJ_BOOT_IMG_OUT)/RAMDISK/file_contexts.bin done";  \
+		fi
+
 endif
 
 ###### pack boot ######
@@ -77,6 +83,12 @@ prepare_boot_ramdisk:
 ifneq ($(strip $(PRODUCE_SEPOLICY_INJECT)),false)
 	$(hide) $(SEPOLICY_INJECT) $(OUT_OBJ_BOOT)/RAMDISK/sepolicy
 endif
+	$(hide) if [ -f $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin ]; then \
+			echo ">> pack $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin ..."; \
+			$(SEFCONTEXT_COMPILE_TOOL) -o $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin $(OUT_OBJ_BOOT)/RAMDISK/file_contexts; \
+			rm -r $(OUT_OBJ_BOOT)/RAMDISK/file_contexts; \
+			echo "<< pack $(OUT_OBJ_BOOT)/RAMDISK/file_contexts.bin done"; \
+		fi
 	$(hide) $(foreach prebuilt_pair,$(BOOT_PREBUILT_FILES),\
 			$(eval src_file := $(call word-colon,1,$(prebuilt_pair)))\
 			$(eval dst_file := $(call word-colon,2,$(prebuilt_pair)))\
@@ -103,7 +115,7 @@ PRJ_RECOVERY_FSTAB      := $(PRJ_ROOT)/recovery.fstab
 VENDOR_RECOVERY         := $(VENDOR_DIR)/RECOVERY
 SOURCE_RECOVERY         := $(BOARD_DIR)/RECOVERY
 OUT_OBJ_RECOVERY        := $(OUT_OBJ_DIR)/RECOVERY
-OUT_RECOVERY_IMG        := $(OUT_BOOTABLE_IMAGES)/$(RECOVERY_IMG)
+OUT_RECOVERY_IMG        := $(OUT_IMAGES)/$(RECOVERY_IMG)
 
 VENDOR_RECOVERY_KERNEL       := $(VENDOR_RECOVERY)/kernel
 VENDOR_RECOVERY_RAMDISK	     := $(VENDOR_RECOVERY)/RAMDISK
@@ -119,6 +131,13 @@ OUT_OBJ_RECOVERY_DEFAULT_PROP:= $(OUT_OBJ_RECOVERY_RAMDISK)/default.prop
 
 # unpack recovery.img to out/obj/RECOVERY
 unpack-recovery:
+ifeq ($(PRODUCE_IS_AB_UPDATE),true)
+	$(hide) if [ ! -e $(PRJ_BOOT_IMG) ];then \
+			echo "<< ERROR: can not find $(PRJ_BOOT_IMG)!!";  \
+			exit $(ERR_NOT_PREPARE_BOOT_IMG); \
+		fi
+	$(hide) cp $(PRJ_BOOT_IMG) $(PRJ_RECOVERY_IMG)
+endif
 	$(hide) echo ">> unpack  $(PRJ_RECOVERY_IMG) to $(OUT_OBJ_RECOVERY) ..."
 	$(hide) if [ ! -e $(PRJ_RECOVERY_IMG) ];then \
 			echo "<< ERROR: can not find $(PRJ_RECOVERY_IMG)!!";  \
@@ -126,6 +145,9 @@ unpack-recovery:
 		fi
 	$(hide) rm -rf $(OUT_OBJ_RECOVERY)
 	$(hide) $(UNPACK_BOOT_PY) $(PRJ_RECOVERY_IMG) $(OUT_OBJ_RECOVERY)
+ifeq ($(PRODUCE_IS_AB_UPDATE),true)
+	$(hide) rm $(PRJ_RECOVERY_IMG)
+endif
 	$(hide) echo "<< unpack  $(PRJ_RECOVERY_IMG) to $(OUT_OBJ_RECOVERY) done"
 
 ###### pack recovery ######

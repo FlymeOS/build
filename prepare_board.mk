@@ -18,8 +18,8 @@ endif
 	$(hide) if [ -f $(BOARD_DIR)/boot.img ]; then \
 			boot_image=$(BOARD_DIR)/boot.img; \
 		else  \
-			if [ -f $(BOARD_DIR)/BOOTABLE_IMAGES/boot.img ]; then \
-				boot_image=$(BOARD_DIR)/BOOTABLE_IMAGES/boot.img; \
+			if [ -f $(BOARD_DIR)/IMAGES/boot.img ]; then \
+				boot_image=$(BOARD_DIR)/IMAGES/boot.img; \
 			fi; \
 		fi; \
 		if [ "x$$boot_image" != "x" -a ! -f $(BOARD_DIR)/BOOT/RAMDISK/init ];then \
@@ -32,8 +32,8 @@ endif
 	$(hide) if [ -f $(BOARD_DIR)/recovery.img ]; then \
 			recovery_image=$(BOARD_DIR)/recovery.img; \
 		else  \
-			if [ -f $(BOARD_DIR)/BOOTABLE_IMAGES/recovery.img ]; then \
-				recovery_image=$(BOARD_DIR)/BOOTABLE_IMAGES/recovery.img; \
+			if [ -f $(BOARD_DIR)/IMAGES/recovery.img ]; then \
+				recovery_image=$(BOARD_DIR)/IMAGES/recovery.img; \
 			fi; \
 		fi; \
 		if [ "x$$recovery_image" != "x" -a ! -f $(BOARD_DIR)/RECOVERY/RAMDISK/init ];then \
