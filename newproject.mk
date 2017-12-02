@@ -31,7 +31,7 @@ $(OEM_TARGET_ZIP): $(PRJ_RECOVERY_FSTAB)
 
 $(OEM_TARGET_STD_ZIP): $(OEM_TARGET_ZIP)
 	$(hide) echo ">>> normalize the $(OEM_TARGET_ZIP) ..."
-	$(hide) $(OTA_NORMALIZE) --input $(OEM_TARGET_ZIP)
+	$(hide) $(OTA_NORMALIZE) --input $(OEM_TARGET_ZIP) $(if $(filter true,$(USE_BAKSMALI)),--use-baksmali,)
 	$(hide) echo "<<< normalize the $(OEM_TARGET_ZIP) done"
 
 ./PHONY: prepare-vendor
