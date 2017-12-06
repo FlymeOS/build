@@ -11,24 +11,25 @@ BOARD_MODIFY_RESID_FILES := \
     app/ConnectivitySettings/ConnectivitySettings.apk \
     app/MzBlockService/MzBlockService.apk \
     app/MzSimContacts/MzSimContacts.apk \
+    framework/flyme-framework.jar \
+    framework/flyme-telephony-common.jar \
     priv-app/Contacts/Contacts.apk \
     priv-app/ContactsProvider/ContactsProvider.apk \
-    priv-app/DownloadProvider/DownloadProvider.apk \
     priv-app/Dialer/Dialer.apk \
+    priv-app/DownloadProvider/DownloadProvider.apk \
     priv-app/InCallUI/InCallUI.apk \
     priv-app/Keyguard/Keyguard.apk \
     priv-app/ManagedProvisioning/ManagedProvisioning.apk \
     priv-app/MediaProvider/MediaProvider.apk \
     priv-app/Mms/Mms.apk \
     priv-app/PackageInstaller/PackageInstaller.apk \
-    priv-app/Settings/Settings.apk \
     priv-app/SettingsProvider/SettingsProvider.apk \
+    priv-app/Settings/Settings.apk \
     priv-app/SystemUI/SystemUI.apk \
     priv-app/Telecom/Telecom.apk \
     priv-app/TelephonyProvider/TelephonyProvider.apk \
-    priv-app/TeleService/TeleService.apk \
-    framework/flyme-framework.jar \
-    framework/flyme-telephony-common.jar
+    priv-app/TeleService/TeleService.apk
+
 
 $(call resetPosition,BOARD_MODIFY_RESID_FILES,$(BOARD_SYSTEM_FOR_POS))
 
@@ -70,33 +71,38 @@ BOARD_PROPERTY_OVERRIDES += \
 
 BOARD_PROPERTY_FOLLOW_BASE := \
     persist.sys.disable_blur_view \
-    persist.sys.static_blur_mode \
-    persist.sys.meizu.region \
+    persist.sys.disable_glass_blur \
+    persist.sys.keyguard_intercep \
     persist.sys.meizu.codepage \
-    ro.config.notification_sound \
-    ro.config.ringtone \
-    ro.config.alarm_alert \
-    ro.config.mms_sound \
-    ro.config.email_sound \
-    ro.config.calendar_sound \
-    ro.meizu.region.enable \
-    ro.meizu.contactmsg.auth \
-    ro.meizu.customize.pccw \
-    ro.meizu.autorecorder \
-    ro.meizu.visualvoicemail \
-    ro.meizu.permanentkey \
-    ro.meizu.setupwizard.flyme \
-    ro.meizu.setupwizard.setlang \
-    ro.meizu.security \
-    sys.meizu.m35x.white.config \
-    sys.meizu.white.config \
-    ro.meizu.rom.config \
-    ro.meizu.voip.support \
-    ro.meizu.sip.support \
-    ro.flyme.hideinfo \
+    persist.sys.meizu.region \
+    persist.sys.static_blur_mode \
     persist.sys.use.flyme.icon \
     ro.build.display.id \
-    persist.sys.disable_glass_blur
+    ro.config.alarm_alert \
+    ro.config.calendar_sound \
+    ro.config.email_sound \
+    ro.config.mms_sound \
+    ro.config.notification_sound \
+    ro.config.ringtone \
+    ro.flyme.hideinfo \
+    ro.flyme.published \
+    ro.meizu.autorecorder \
+    ro.meizu.contactmsg.auth \
+    ro.meizu.customize.pccw \
+    ro.meizu.permanentkey \
+    ro.meizu.published.type \
+    ro.meizu.region.enable \
+    ro.meizu.rom.config \
+    ro.meizu.security \
+    ro.meizu.setupwizard.flyme \
+    ro.meizu.setupwizard.setlang \
+    ro.meizu.sip.support \
+    ro.meizu.upgrade.config \
+    ro.meizu.visualvoicemail \
+    ro.meizu.voip.support \
+    sys.meizu.m35x.white.config \
+    sys.meizu.white.config
+
 
 BOARD_SERVICES += \
 

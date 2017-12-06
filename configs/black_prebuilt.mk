@@ -15,9 +15,7 @@ BLACK_LIST_DIRS += \
 	xbin/%
 
 BLACK_LIST += \
-	app/Bluetooth/Bluetooth.apk \
-	app/BluetoothMidiService/BluetoothMidiService.apk \
-	app/NfcNci/NfcNci.apk
+	app/Bluetooth/Bluetooth.apk
 
 BLACK_LIST += \
 	$(notdir $(PREPARE_SOURCE))
