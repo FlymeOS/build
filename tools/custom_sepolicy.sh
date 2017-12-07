@@ -7,7 +7,7 @@
 #################################################################################################
 
 PRJ_ROOT=`pwd`
-SEPOLICY_INJECT=$PORT_ROOT/build/tools/sepolicy-inject/sepolicy-inject
+SEPOLICY_INJECT=$PORT_ROOT/build/tools/sepolicy-inject/sepolicy-inject-v2
 SEPOLICY=$1
 
 if [ ! -f $SEPOLICY ] || [ x"$SEPOLICY" = x ]; then

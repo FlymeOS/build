@@ -578,6 +578,11 @@ ROOT $(OUT_ROOT):
 			rm -rf $(OUT_ROOT); \
 			cp -a $(PRJ_ROOT)/ROOT $(OUT_TARGET_DIR); \
 		fi
+ifneq ($(strip $(PRODUCE_SEPOLICY_INJECT)),false)
+	$(hide) if [ -f $(OUT_ROOT)/sepolicy ]; then \
+			$(SEPOLICY_INJECT) $(OUT_ROOT)/sepolicy; \
+		fi
+endif
 	$(hide) if [ -f $(OUT_ROOT)/file_contexts.bin ]; then \
 			echo ">> pack $(OUT_ROOT)/file_contexts.bin ..."; \
 			$(SEFCONTEXT_COMPILE_TOOL) -o $(OUT_ROOT)/file_contexts.bin $(OUT_ROOT)/file_contexts; \
