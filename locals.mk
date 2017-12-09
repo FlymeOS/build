@@ -367,6 +367,7 @@ OTA_CERT := $(PORT_ROOT)/$(CERTS_PATH)/testkey
 ############### tools in $(PORT_ROOT)/tools ###############
 PORT_TOOLS      := $(PORT_ROOT)/tools
 APKTOOL         := $(PORT_TOOLS)/apktool
+APKTOOL_FRAMEWORK := $(PORT_TOOLS)/apktool_framework
 OTA_NORMALIZE	:= $(PORT_TOOLS)/otanormalize
 
 NAME_TO_ID_TOOL := $(PORT_TOOLS)/nametoid
