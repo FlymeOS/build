@@ -442,7 +442,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) echo ">>> build |target-files|SYSTEM|board_modify_jar| to $$@, tempSmaliDir:$$(tempSmaliDir) ..."
 	$(hide) rm -rf "$$(tempSmaliDir)"
 	$(hide) mkdir -p $(OUT_OBJ_FRAMEWORK)
-	$(hide) $(APKTOOL) d -t $(APKTOOL_BOARD_TAG) $(BOARD_SYSTEM)/$(2) -o $$(tempSmaliDir)
+	$(hide) $(APKTOOL_FRAMEWORK) d -t $(APKTOOL_BOARD_TAG) $(BOARD_SYSTEM)/$(2) -o $$(tempSmaliDir)
 	$(hide) $(call modify_res_id,$$(tempSmaliDir))
 	$(hide) $(call prepare_custom_jar,$$(jarBaseName),$$(tempSmaliDir))
 	$(hide) $(call port_custom_jar,$$(jarBaseName),$$(tempSmaliDir))
@@ -451,7 +451,7 @@ $(OUT_OBJ_SYSTEM)/$(2): $(BOARD_SYSTEM)/$(2) $(MERGE_UPDATE_TXT) $(PREPARE_FRW_R
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
 	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_BOARD_TAG));
 	$(hide) mkdir -p $(OUT_OBJ_SYSTEM)
-	$(hide) $(APKTOOL) b $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) -o $$@
+	$(hide) $(APKTOOL_FRAMEWORK) b $$(tempSmaliDir) -p $(APKTOOL_FRAME_PATH_BOARD_MODIFY) -o $$@
 	$(hide) rm -rf "$$(tempSmaliDir)";
 	$(hide) echo "<<< build |target-files|SYSTEM|board_modify_jar| to $$@ done"
 endef
@@ -480,7 +480,7 @@ $(eval board_prebuilt_from:=)
 	$(hide) $(call custom_jar,$$(jarBaseName),$$(tempSmaliDir))
 	$(hide) $(call name_to_id,$$(tempSmaliDir))
 	$(hide) $(call update_apktool_yml,$$(tempSmaliDir)/apktool.yml,$(APKTOOL_MERGED_TAG));
-	$(hide) $(APKTOOL) b $$(tempSmaliDir) -o $$@;
+	$(hide) $(APKTOOL_FRAMEWORK) b $$(tempSmaliDir) -o $$@;
 	$(hide) rm -rf $$(tempSmaliDir);
 	$(hide) rm -rf $$(boardSmaliDir);
 	$(hide) echo "<<< build |target-files|SYSTEM|vendor_modify_jar| to $$@ done";

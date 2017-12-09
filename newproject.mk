@@ -97,7 +97,7 @@ define decode_files
 $(2): ifoemvendor
 	$(hide) echo ">>> decode $(1) $(2) ..."
 	$(hide) rm -rf $(2)
-	$(hide) $(APKTOOL) d -t $(APKTOOL_VENDOR_TAG) $(1) -o $(2)
+	$(hide) $(APKTOOL_FRAMEWORK) d -t $(APKTOOL_VENDOR_TAG) $(1) -o $(2)
 	$(hide) echo "<<< decode $(1) $(2) done"
 endef
 
