@@ -152,14 +152,11 @@ function updateSystemPartitionSize {
             slot_suffix="_a"
         fi
     fi
-    if [ "$ROOT_STATE" = "system_root" ]; then
-        SYSTEM_MOUNT_POINT=$(adb shell su -c find /dev/block/ -name system$slot_suffix)
-        SYSTEM_SOFT_MOUNT_POINT=$(adb shell su -c ls -l $SYSTEM_MOUNT_POINT | awk -F '->' '{print $2}' | awk -F '/' '{print $NF}')
-    else
+   
         waitForDeviceOnline
-        SYSTEM_MOUNT_POINT=$(adb shell find /dev/block/ -name "system"$slot_suffix)
+        SYSTEM_MOUNT_POINT=$(adb shell mount | grep "system" | awk '{print $1}')
         SYSTEM_SOFT_MOUNT_POINT=$(adb shell ls -l $SYSTEM_MOUNT_POINT | awk -F '->' '{print $2}' | awk -F '/' '{print $NF}')
-    fi
+
     SYSTEM_PARTITION_SIZE=$(adb shell cat proc/partitions | grep $SYSTEM_SOFT_MOUNT_POINT | awk 'BEGIN{FS=" "}{print $3}')
     if [ x"$SYSTEM_PARTITION_SIZE" = x ] || [ -z "$(echo $SYSTEM_PARTITION_SIZE | sed -n "/^[0-9]\+$/p")" ]; then
         echo "system partition size get error!"
@@ -218,11 +215,9 @@ function buildSystemInfo {
 function buildSystemDir_dd {
     echo ">> dd system from device (time-costly, be patient) ..."
     waitForDeviceOnline
-    if [ "$ROOT_STATE" = "system_root" ];then
-        adb shell su -c dd if=$SYSTEM_MOUNT_POINT of=/sdcard/system.img bs=2048 > /dev/null 2>&1
-    else
-        adb shell dd if=$SYSTEM_MOUNT_POINT of=/sdcard/system.img bs=2048 > /dev/null 2>&1
-    fi
+    
+    adb shell dd if=$SYSTEM_MOUNT_POINT of=/sdcard/system.img bs=2048> /dev/null 2>&1
+    
     adb pull /sdcard/system.img $OUT_DIR/system.img  > /dev/null 2>&1
     adb shell rm /sdcard/system.img
     unpack_systemimg $OUT_DIR/system.img $SYSTEM_DIR
