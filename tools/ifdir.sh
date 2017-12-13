@@ -7,7 +7,9 @@ function install_frameworks()
 {
     local options=""
     [ ! -z $2 ] && options="$options -t $2"
-    [ ! -z $3 ] && options="$options -p $3"
+    [ ! -z $3 ] && options="$options -p $3" && mkdir -p $3
+
+    mkdir -p ~/.local/share/apktool/framework
 
     for res_apk in `find $1 -name "*.apk"`;
     do
