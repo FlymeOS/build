@@ -49,7 +49,32 @@ function __cmd_coron()
     esac
 }
 
-complete -F __cmd_coron flyme
+# Add the completion function support for bash/zsh. <gesangtome@foxmail.com>
+function __get_shell()
+{
+    GetShellClass=`ps | grep $$ | awk '{print $4}'`
+
+    case $GetShellClass in
+
+     bash)
+         complete -F __cmd_coron flyme
+         unset GetShellClass
+      ;;
+
+      zsh)
+         compdef __cmd_coron flyme
+         unset GetShellClass
+      ;;
+
+        *)
+         printf "Current shell auto-completion does not support.\n"
+         unset GetShellClass
+      ;;
+
+    esac
+}
+
+ __get_shell
 
 function ifdir()
 {
