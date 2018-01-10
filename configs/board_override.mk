@@ -86,6 +86,7 @@ BOARD_PROPERTY_FOLLOW_BASE := \
     ro.config.ringtone \
     ro.flyme.hideinfo \
     ro.flyme.published \
+    ro.flyme.version \
     ro.meizu.autorecorder \
     ro.meizu.contactmsg.auth \
     ro.meizu.customize.pccw \
