@@ -44,6 +44,7 @@ BOARD_PREBUILT += \
     lib/libvlife_media.so \
     lib/libvlife_openglutil.so \
     lib/libvlife_render.so \
+    lib/libQCode.so \
     media/launcher.xml
 
 ifeq ($(strip $(PRODUCE_INTERNATIONAL_ROM)),true)

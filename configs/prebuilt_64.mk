@@ -26,6 +26,7 @@ BOARD_PREBUILT += \
     lib64/libvlife_media.so \
     lib64/libvlife_openglutil.so \
     lib64/libvlife_render.so \
+    lib64/libQCode.so
 
 ifeq ($(strip $(PRODUCE_INTERNATIONAL_ROM)),true)
 BOARD_PREBUILT += \
