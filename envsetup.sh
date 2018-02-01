@@ -213,6 +213,8 @@ function sign()
 
 function sign_key()
 {
+    JAVA_LIBRARY_PATH=$PORT_ROOT/build/tools/lib64
+
     keyType=$1
     apkName=$2
 
@@ -236,7 +238,7 @@ function sign_key()
     rm -rf $apkName.signed $apkName.signed.aligned
 
     zip -d $apkName "META-INF/*" 2>&1 > /dev/null
-    java -jar $SIGN_JAR "$KEY_DIR/$keyType.x509.pem" "$KEY_DIR/$keyType.pk8" $apkName $apkName.signed
+    java -Djava.library.path=$JAVA_LIBRARY_PATH -jar $SIGN_JAR "$KEY_DIR/$keyType.x509.pem" "$KEY_DIR/$keyType.pk8" $apkName $apkName.signed
     echo ">>> signed out: $apkName.signed"
 
     zipalign 4 $apkName.signed $apkName.signed.aligned
