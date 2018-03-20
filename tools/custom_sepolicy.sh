@@ -70,6 +70,24 @@ $SEPOLICY_INJECT -s untrusted_app -t networkmanagement_service_flyme_service -c 
 $SEPOLICY_INJECT -s untrusted_app -t flyme_wallpaper_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
 $SEPOLICY_INJECT -s untrusted_app -t flyme_statusbar_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
 
+$SEPOLICY_INJECT -s priv_app -t access_control_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t flyme_packagemanager_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t alphame_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t move_window_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t flyme_theme_manager_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t networkmanagement_service_flyme_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t flyme_wallpaper_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s priv_app -t flyme_statusbar_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+
+$SEPOLICY_INJECT -s radio -t access_control_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t flyme_packagemanager_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t alphame_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t move_window_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t flyme_theme_manager_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t networkmanagement_service_flyme_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t flyme_wallpaper_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+$SEPOLICY_INJECT -s radio -t flyme_statusbar_service -c service_manager -p find -P $SEPOLICY > /dev/null 2>&1
+
 if [ -f $PRJ_ROOT/custom_sepolicy.sh ]; then
     echo "Run $PRJ_ROOT/custom_sepolicy.sh ..."
     source $PRJ_ROOT/custom_sepolicy.sh $SEPOLICY_INJECT $SEPOLICY
