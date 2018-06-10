@@ -19,7 +19,7 @@ function waitForDeviceOnline {
 	local timeout=30
 	while [ $timeout -gt 0 ]
 	do
-		if adb shell ls > /dev/null 2>&1; then
+		if adb devices | grep -w "device" > /dev/null 2>&1; then
 			echo ">>> device is online"
 			break
 		fi
