@@ -4,7 +4,6 @@
 #**************************************************#
 TOPFILE=build/envsetup.sh
 PROJECT_MAX_DEPTH=3
-JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
 if [ -f $TOPFILE ] ; then
    PORT_ROOT=$PWD
@@ -33,13 +32,33 @@ if [ -n "$PORT_ROOT" ]; then
     export PORT_ROOT PORT_BUILD
 fi
 
-if [ -d $JAVA_HOME ]; then
-    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-    export PATH=$JAVA_HOME/bin:$PATH
-    export CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+function SET_JAVA_VARIABLES()
+{
+    local JAVA_HOME=$1
+    local PATH=$2
+    local CLASSPATH=$3
+
+    export JAVA_HOME
+    export PATH
+    export CLASSPATH
+}
+
+if [ -d /usr/lib/jvm/java-8-openjdk-amd64 ]; then
+    JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+    PATH=$JAVA_HOME/bin:$PATH
+    CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+    SET_JAVA_VARIABLES $JAVA_HOME $PATH $CLASSPATH
+
 else
-    echo "Failed! OpenJDK 8 Not install!"
-    return
+    if [ -d /usr/lib/jvm/java-1.8.0-openjdk ]; then
+        JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk
+        PATH=$JAVA_HOME/bin:$PATH
+        CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/lib/tools.jar
+        SET_JAVA_VARIABLES $JAVA_HOME $PATH $CLASSPATH
+    else
+        echo "Failed! OpenJDK 8 Not install!"
+        return
+    fi
 fi
 
 # Command "coron" complete
